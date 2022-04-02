@@ -1,0 +1,5 @@
+label0
+const8 0 42
+print 0
+const8 0 label0
+jump 0
