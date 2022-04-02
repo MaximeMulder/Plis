@@ -1,5 +1,10 @@
 label0
 const8 0 42
 print 0
-const8 0 label0
+const8 0 label1
 jump 0
+label1
+const16 1 777
+print 1
+const8 1 label0
+jump 1

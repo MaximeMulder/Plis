@@ -1,14 +1,13 @@
 pub mod instructions;
+pub mod operand;
 pub mod parser;
 
 use std::collections::HashMap;
 
 use parser::Parser;
-use instructions::{
-    instruction_code,
-    instruction_length_size,
-    word_opcode,
-};
+use instructions::{ word_opcode, opcode_operands };
+
+use crate::opcode::Opcode;
 
 pub struct Assembler {
     code: Box<str>,
@@ -33,12 +32,12 @@ impl Assembler {
                 continue;
             }
 
-            let (length, size) = instruction_length_size(opcode.unwrap());
-            for _ in 1 .. length {
+            cursor += 1;
+            let operands = opcode_operands(opcode.unwrap());
+            for operand in operands {
                 parser.next_word();
+                cursor += operand.size();
             }
-
-            cursor += size;
         }
 
         let mut parser = Parser::new(&self.code);
@@ -49,7 +48,11 @@ impl Assembler {
                 continue;
             }
 
-            program.extend_from_slice(&instruction_code(opcode.unwrap(), &mut parser, &self.labels));
+            program.push(Opcode::to_raw(opcode.unwrap()));
+            let operands = opcode_operands(opcode.unwrap());
+            for operand in operands {
+                operand.parse(parser.next_word().unwrap(), &mut program, &self.labels);
+            }
         }
 
         program.into_boxed_slice()
