@@ -1,5 +1,6 @@
-use crate::opcode::Opcode;
-use crate::assembler::operand::Operand;
+use architecture::Opcode;
+
+use crate::operand::Operand;
 
 pub fn word_opcode(word: &str) -> Option<Opcode> {
     Some(match word {

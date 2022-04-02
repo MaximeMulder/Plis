@@ -1,4 +1,5 @@
-use crate::opcode::Opcode;
+use architecture::Opcode;
+
 use crate::program::Program;
 use crate::register::RegisterId;
 

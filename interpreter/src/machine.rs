@@ -1,5 +1,6 @@
+use architecture::Opcode;
+
 use crate::memory::Memory;
-use crate::opcode::Opcode;
 use crate::program::Program;
 use crate::register::Registers;
 use crate::thread::Threads;

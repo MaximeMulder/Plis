@@ -3,5 +3,19 @@
 version = 3
 
 [[package]]
-name = "epism"
+name = "architecture"
 version = "0.1.0"
+
+[[package]]
+name = "assembler"
+version = "0.1.0"
+dependencies = [
+ "architecture",
+]
+
+[[package]]
+name = "interpreter"
+version = "0.1.0"
+dependencies = [
+ "architecture",
+]

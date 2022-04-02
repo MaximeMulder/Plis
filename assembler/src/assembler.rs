@@ -1,13 +1,8 @@
-pub mod instructions;
-pub mod operand;
-pub mod parser;
-
+use architecture::Opcode;
 use std::collections::HashMap;
 
-use parser::Parser;
-use instructions::{ word_opcode, opcode_operands };
-
-use crate::opcode::Opcode;
+use crate::parser::Parser;
+use crate::instructions::{ word_opcode, opcode_operands };
 
 pub struct Assembler {
     code: Box<str>,
