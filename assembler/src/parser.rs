@@ -5,7 +5,10 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(text: &'a str) -> Self {
-        Self { text, cursor: 0 }
+        Self {
+            text,
+            cursor: 0,
+        }
     }
 
     pub fn next_word(&mut self) -> Option<&str> {
