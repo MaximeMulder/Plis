@@ -1,3 +1,4 @@
+#![feature(decl_macro)]
 #![feature(let_else)]
 
 mod assembler;

@@ -49,52 +49,30 @@ fn parse_label(word: &str, labels: &HashMap<Box<str>, usize>) -> usize {
     panic!("Error label.");
 }
 
-fn parse_integer(word: &str) -> usize {
-    if let Ok(integer) = usize::from_str_radix(word, 10) {
-        return integer;
-    }
+macro parse_const($type:ty, $word:expr, $labels:expr) {{
+    let constant = if check_integer($word) {
+        <$type>::from_str_radix($word, 10).unwrap_or_else(|_| panic!("Constant error."))
+    } else {
+        <$type>::try_from(parse_label($word, $labels)).unwrap_or_else(|_| panic!("Label error."))
+    };
 
-    panic!("Error integer.");
-}
-
-fn parse_const(word: &str, labels: &HashMap<Box<str>, usize>) -> usize {
-    if !check_integer(word) {
-        return parse_label(word, labels)
-    }
-
-    parse_integer(word)
-}
+    constant.to_be_bytes()
+}}
 
 fn parse_const8(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 1] {
-    if let Ok(constant) = u8::try_from(parse_const(word, labels)) {
-        return constant.to_be_bytes();
-    }
-
-    panic!("Error constant.");
+    parse_const!(u8, word, labels)
 }
 
 fn parse_const16(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 2] {
-    if let Ok(constant) = u16::try_from(parse_const(word, labels)) {
-        return constant.to_be_bytes();
-    }
-
-    panic!("Error constant.");
+    parse_const!(u16, word, labels)
 }
 
 fn parse_const32(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 4] {
-    if let Ok(constant) = u32::try_from(parse_const(word, labels)) {
-        return constant.to_be_bytes();
-    }
-
-    panic!("Error constant.")
+    parse_const!(u32, word, labels)
 }
 
 fn parse_const64(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 8] {
-    if let Ok(constant) = u64::try_from(parse_const(word, labels)) {
-        return constant.to_be_bytes();
-    }
-
-    panic!("Error constant.");
+    parse_const!(u64, word, labels)
 }
 
 fn parse_register(word: &str) -> u8 {
