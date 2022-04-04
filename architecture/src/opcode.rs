@@ -37,8 +37,8 @@ pub enum Opcode {
 }
 
 impl Opcode {
-    pub fn from_raw(raw: u8) -> Opcode {
-        match raw {
+    pub fn from_raw(raw: u8) -> Option<Opcode> {
+        Some(match raw {
             0x00 => Opcode::Nop,
             0x01 => Opcode::Const8,
             0x02 => Opcode::Const16,
@@ -73,8 +73,8 @@ impl Opcode {
             0x1F => Opcode::Scan,
             0x20 => Opcode::Print,
             0x21 => Opcode::Exit,
-            _ => panic!(),
-        }
+            _ => return None,
+        })
     }
 
     pub fn to_raw(opcode: Opcode) -> u8 {

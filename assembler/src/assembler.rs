@@ -61,9 +61,13 @@ impl Assembler {
 
             program.push(Opcode::to_raw(opcode));
             let operands = opcode_operands(opcode);
-            parser.with_operands(operands, |operand, word| {
-                operand.parse(word, &mut program, &labels);
-            });
+            for operand in operands {
+                parser.next_comma();
+                let word = parser.next_word().unwrap();
+                if let Err(error) = operand.parse(word, &mut program, &labels) {
+                    parser.error(&error);
+                }
+            }
         }
 
         program.into_boxed_slice()
@@ -80,7 +84,7 @@ impl Parser<'_> {
         self.with_operand(operand, |operand, word| closure(operand, word));
         for operand in iterator {
             if !self.next_comma() {
-                panic!("Comma error.");
+                self.error("Missing comma.");
             }
 
             self.with_operand(operand, |operand, word| closure(operand, word));
@@ -89,7 +93,7 @@ impl Parser<'_> {
 
     fn with_operand(&mut self, operand: Operand, mut closure: impl FnMut(Operand, &str)) {
         let Some(word) = self.next_word() else {
-            panic!("Word error.");
+            self.error("Missing operand.");
         };
 
         closure(operand, word);

@@ -24,16 +24,18 @@ impl Operand {
         }
     }
 
-    pub fn parse(self, word: &str, program: &mut Vec<u8>, labels: &HashMap<Box<str>, usize>) {
+    pub fn parse(self, word: &str, program: &mut Vec<u8>, labels: &HashMap<Box<str>, usize>) -> Result<(), Box<str>> {
         match self {
             Operand::Const8   => program.extend_from_slice(&parse_const8(word, labels)),
             Operand::Const16  => program.extend_from_slice(&parse_const16(word, labels)),
             Operand::Const32  => program.extend_from_slice(&parse_const32(word, labels)),
             Operand::Const64  => program.extend_from_slice(&parse_const64(word, labels)),
-            Operand::Register => program.push(parse_register(word)),
-            Operand::Lock     => program.push(parse_lock(word)),
-            Operand::Thread   => program.push(parse_thread(word)),
+            Operand::Register => program.push(parse_register(word)?),
+            Operand::Lock     => program.push(parse_lock(word)?),
+            Operand::Thread   => program.push(parse_thread(word)?),
         }
+
+        Ok(())
     }
 }
 
@@ -75,41 +77,41 @@ fn parse_const64(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 8] {
     parse_const!(u64, word, labels)
 }
 
-fn parse_register(word: &str) -> u8 {
+fn parse_register(word: &str) -> Result<u8, Box<str>> {
     let (prefix, index) = word.split_at(1);
     if prefix != "r" {
-        panic!("Error register prefix");
+        return Err(Box::from("Wrong register prefix."));
     }
 
     let Ok(register) = u8::from_str_radix(index, 10) else {
-        panic!("Error register index");
+        return Err(Box::from("Wrong register index."));
     };
 
-    register.to_be()
+    Ok(register.to_be())
 }
 
-fn parse_lock(word: &str) -> u8 {
+fn parse_lock(word: &str) -> Result<u8, Box<str>> {
     let (prefix, index) = word.split_at(1);
     if prefix != "l" {
-        panic!("Error lock prefix");
+        return Err(Box::from("Wrong lock prefix."));
     }
 
     let Ok(lock) = u8::from_str_radix(index, 10) else {
-        panic!("Error lock index");
+        return Err(Box::from("Wrong lock index."));
     };
 
-    lock.to_be()
+    Ok(lock.to_be())
 }
 
-fn parse_thread(word: &str) -> u8 {
+fn parse_thread(word: &str) -> Result<u8, Box<str>> {
     let (prefix, index) = word.split_at(1);
     if prefix != "t" {
-        panic!("Error thread prefix");
+        return Err(Box::from("Wrong thread prefix."));
     }
 
     let Ok(thread) = u8::from_str_radix(index, 10) else {
-        panic!("Error thread index");
+        return Err(Box::from("Wrong thread index."));
     };
 
-    thread.to_be()
+    Ok(thread.to_be())
 }

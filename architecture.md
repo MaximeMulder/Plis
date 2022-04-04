@@ -381,7 +381,7 @@ Description:
 
 Opcode: `0x1C`
 
-Format: `start <r:address> <t:thread>`
+Format: `start <t:thread> <r:address>`
 
 Size: 3
 

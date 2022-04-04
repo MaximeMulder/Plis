@@ -1,12 +1,13 @@
 use architecture::Opcode;
 
+use crate::lock::LockId;
 use crate::program::Program;
 use crate::register::RegisterId;
 
 const THREADS_COUNT: usize = 16;
 
 pub struct Threads {
-    pub threads: [Thread; THREADS_COUNT],
+    threads: [Thread; THREADS_COUNT],
 }
 
 impl Threads {
@@ -14,6 +15,18 @@ impl Threads {
         Self {
             threads: [(); THREADS_COUNT].map(|_| Thread::new()),
         }
+    }
+
+    pub fn get(&self, id: ThreadId) -> &Thread {
+        &self.threads[ThreadId::to_raw(id)]
+    }
+
+    pub fn get_mut(&mut self, id: ThreadId) -> &mut Thread {
+        &mut self.threads[ThreadId::to_raw(id)]
+    }
+
+    pub fn iter_ids(&self) -> impl Iterator<Item = ThreadId> {
+        (0 as u8 .. THREADS_COUNT as u8).map(|i| ThreadId::from_raw(i))
     }
 }
 
@@ -26,8 +39,8 @@ impl ThreadId {
         Self(raw)
     }
 
-    pub fn to_raw(self) -> usize {
-        self.0 as usize
+    pub fn to_raw(id: ThreadId) -> usize {
+        id.0 as usize
     }
 }
 
@@ -47,13 +60,19 @@ impl Thread {
     pub fn next_opcode(&mut self, program: &Program) -> Opcode {
         let opcode = program.get_8(self.cursor);
         self.cursor += 1;
-        Opcode::from_raw(opcode)
+        Opcode::from_raw(opcode).unwrap()
     }
 
     pub fn next_register(&mut self, program: &Program) -> RegisterId {
         let register = program.get_8(self.cursor);
         self.cursor += 1;
         RegisterId::from_raw(register)
+    }
+
+    pub fn next_lock(&mut self, program: &Program) -> LockId {
+        let lock = program.get_8(self.cursor);
+        self.cursor += 1;
+        LockId::from_raw(lock)
     }
 
     pub fn next_thread(&mut self, program: &Program) -> ThreadId {
@@ -88,5 +107,9 @@ impl Thread {
 
     pub fn jump(&mut self, cursor: u64) {
         self.cursor = cursor;
+    }
+
+    pub fn wait(&mut self) {
+        self.cursor -= 2;
     }
 }

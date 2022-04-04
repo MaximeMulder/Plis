@@ -1,3 +1,5 @@
+use std::process::exit;
+
 pub struct Parser<'a> {
     text: &'a str,
     cursor: usize,
@@ -24,6 +26,11 @@ impl<'a> Parser<'a> {
     pub fn next_word(&mut self) -> Option<&str> {
         self.next();
         self.word()
+    }
+
+    pub fn error(&self, message: &str) -> ! {
+        println!("ERROR POSITION {}: {}", self.cursor, message);
+        exit(0);
     }
 }
 

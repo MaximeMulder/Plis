@@ -71,7 +71,7 @@ pub fn opcode_operands(opcode: Opcode) -> &'static [Operand] {
         Opcode::Wait    => &[Operand::Lock],
         Opcode::Lock    => &[Operand::Lock],
         Opcode::Unlock  => &[Operand::Lock],
-        Opcode::Start   => &[Operand::Thread],
+        Opcode::Start   => &[Operand::Thread, Operand::Register],
         Opcode::Stop    => &[Operand::Thread],
         Opcode::End     => &[],
         Opcode::Scan    => &[Operand::Register],

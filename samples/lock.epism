@@ -1,0 +1,24 @@
+const8 r5, label2
+start t1, r5
+const8 r0, 1
+const8 r1, 0
+const8 r2, 2
+const8 r3, 3
+label0:
+add r1, r0, r1, l0
+print r1
+rem r1, r2, r4, l0
+const8 r5, label1
+jumpif r5, r4
+const8 r5, label0
+jump r5
+label1:
+unlock l0
+lock l0
+const8 r5, label0
+jump r5
+label2:
+wait l0
+print r2
+const8 r6, label2
+jump r6
