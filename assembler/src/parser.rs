@@ -11,6 +11,16 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn next_comma(&mut self) -> bool {
+        self.next();
+        self.comma()
+    }
+
+    pub fn next_colon(&mut self) -> bool {
+        self.next();
+        self.colon()
+    }
+
     pub fn next_word(&mut self) -> Option<&str> {
         self.next();
         self.word()
@@ -30,12 +40,38 @@ impl<'a> Parser<'a> {
 
     fn next(&mut self) {
         while let Some(character) = self.lookahead() {
-            if character.is_alphanumeric() {
+            if !character.is_whitespace() {
                 break;
             }
 
             self.advance(character);
         }
+    }
+
+    fn comma(&mut self) -> bool {
+        let Some(character) = self.lookahead() else {
+            return false;
+        };
+
+        if character != ',' {
+            return false;
+        }
+
+        self.advance(character);
+        true
+    }
+
+    fn colon(&mut self) -> bool {
+        let Some(character) = self.lookahead() else {
+            return false;
+        };
+
+        if character != ':' {
+            return false;
+        }
+
+        self.advance(character);
+        true
     }
 
     fn word(&mut self) -> Option<&str> {

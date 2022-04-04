@@ -1,55 +1,97 @@
 use architecture::Opcode;
 use std::collections::HashMap;
 
+use crate::operand::Operand;
 use crate::parser::Parser;
 use crate::instructions::{ word_opcode, opcode_operands };
 
 pub struct Assembler {
     code: Box<str>,
-    labels: HashMap<Box<str>, usize>,
 }
 
 impl Assembler {
     pub fn new(code: Box<str>) -> Self {
         Self {
             code,
-            labels: HashMap::new(),
         }
     }
 
     pub fn parse(&mut self) -> Box<[u8]> {
-        let mut parser = Parser::new(&self.code);
-        let mut cursor = 0;
-        while let Some(word) = parser.next_word() {
-            let opcode = word_opcode(word);
-            if opcode.is_none() {
-                self.labels.insert(Box::from(word), cursor);
-                continue;
-            }
+        let labels = self.parse_labels();
+        self.parse_instructions(labels)
+    }
 
-            cursor += 1;
-            let operands = opcode_operands(opcode.unwrap());
-            for operand in operands {
-                parser.next_word();
-                cursor += operand.size();
-            }
+    fn parse_labels(&self) -> HashMap<Box<str>, usize> {
+        let mut parser = Parser::new(&self.code);
+        let mut labels = HashMap::new();
+        let mut address = 0;
+        while let Some(word) = parser.next_word() {
+            let Some(opcode) = word_opcode(word) else {
+                let label = Box::from(word);
+                if labels.contains_key(&label) {
+                    panic!("Label error.");
+                }
+
+                if !parser.next_colon() {
+                    panic!("Colon error.");
+                }
+
+                labels.insert(label, address);
+                continue;
+            };
+
+            address += 1;
+            let operands = opcode_operands(opcode);
+            parser.with_operands(operands, |operand, _| {
+                address += operand.size();
+            });
         }
 
+        labels
+    }
+
+    fn parse_instructions(&self, labels: HashMap<Box<str>, usize>) -> Box<[u8]> {
         let mut parser = Parser::new(&self.code);
         let mut program = Vec::new();
         while let Some(word) = parser.next_word() {
-            let opcode = word_opcode(word);
-            if opcode.is_none() {
+            let Some(opcode) = word_opcode(word) else {
+                parser.next_colon();
                 continue;
-            }
+            };
 
-            program.push(Opcode::to_raw(opcode.unwrap()));
-            let operands = opcode_operands(opcode.unwrap());
-            for operand in operands {
-                operand.parse(parser.next_word().unwrap(), &mut program, &self.labels);
-            }
+            program.push(Opcode::to_raw(opcode));
+            let operands = opcode_operands(opcode);
+            parser.with_operands(operands, |operand, word| {
+                operand.parse(word, &mut program, &labels);
+            });
         }
 
         program.into_boxed_slice()
+    }
+}
+
+impl Parser<'_> {
+    fn with_operands(&mut self, operands: &[Operand], mut closure: impl FnMut(Operand, &str)) {
+        let mut iterator = operands.iter().copied();
+        let Some(operand) = iterator.next() else {
+            return;
+        };
+
+        self.with_operand(operand, |operand, word| closure(operand, word));
+        for operand in iterator {
+            if !self.next_comma() {
+                panic!("Comma error.");
+            }
+
+            self.with_operand(operand, |operand, word| closure(operand, word));
+        }
+    }
+
+    fn with_operand(&mut self, operand: Operand, mut closure: impl FnMut(Operand, &str)) {
+        let Some(word) = self.next_word() else {
+            panic!("Word error.");
+        };
+
+        closure(operand, word);
     }
 }

@@ -42,11 +42,11 @@ fn check_integer(word: &str) -> bool {
 }
 
 fn parse_label(word: &str, labels: &HashMap<Box<str>, usize>) -> usize {
-    if let Some(address) = labels.get(word).copied() {
-        return address;
-    }
+    let Some(address) = labels.get(word).copied() else {
+        panic!("Label error.");
+    };
 
-    panic!("Error label.");
+    address
 }
 
 macro parse_const($type:ty, $word:expr, $labels:expr) {{
