@@ -1,4 +1,4 @@
-const REGISTERS_COUNT: usize = 256;
+use architecture::REGISTERS_COUNT;
 
 pub struct Registers {
     registers: [u64; REGISTERS_COUNT],

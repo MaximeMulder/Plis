@@ -5,8 +5,8 @@ use architecture::Opcode;
 use crate::lock::Locks;
 use crate::memory::Memory;
 use crate::program::Program;
-use crate::register::{Registers, RegisterId};
-use crate::thread::{Threads, ThreadId};
+use crate::register::Registers;
+use crate::thread::{ Threads, ThreadId };
 
 pub struct Machine {
     threads: Threads,

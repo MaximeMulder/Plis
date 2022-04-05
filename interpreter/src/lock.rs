@@ -1,4 +1,4 @@
-const LOCKS_COUNT: usize = 64;
+use architecture::LOCKS_COUNT;
 
 pub struct Locks {
     locks: [Lock; LOCKS_COUNT],

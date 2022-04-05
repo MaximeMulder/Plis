@@ -1,5 +1,7 @@
 use std::process::exit;
 
+pub type ParserResult<T> = Result<T, Box<str>>;
+
 pub struct Parser<'a> {
     text: &'a str,
     cursor: usize,

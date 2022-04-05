@@ -29,11 +29,11 @@ impl Assembler {
             let Some(opcode) = word_opcode(word) else {
                 let label = Box::from(word);
                 if labels.contains_key(&label) {
-                    panic!("Label error.");
+                    parser.error("Label already exists.")
                 }
 
                 if !parser.next_colon() {
-                    panic!("Colon error.");
+                    parser.error("Missing colon.");
                 }
 
                 labels.insert(label, address);

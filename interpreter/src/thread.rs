@@ -1,10 +1,8 @@
-use architecture::Opcode;
+use architecture::{ Opcode, THREADS_COUNT };
 
 use crate::lock::LockId;
 use crate::program::Program;
 use crate::register::RegisterId;
-
-const THREADS_COUNT: usize = 16;
 
 pub struct Threads {
     threads: [Thread; THREADS_COUNT],

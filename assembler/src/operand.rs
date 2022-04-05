@@ -1,4 +1,7 @@
+use architecture::{ REGISTERS_COUNT, LOCKS_COUNT, THREADS_COUNT };
 use std::collections::HashMap;
+
+use crate::parser::ParserResult;
 
 #[derive(Clone, Copy)]
 pub enum Operand {
@@ -24,12 +27,12 @@ impl Operand {
         }
     }
 
-    pub fn parse(self, word: &str, program: &mut Vec<u8>, labels: &HashMap<Box<str>, usize>) -> Result<(), Box<str>> {
+    pub fn parse(self, word: &str, program: &mut Vec<u8>, labels: &HashMap<Box<str>, usize>) -> ParserResult<()> {
         match self {
-            Operand::Const8   => program.extend_from_slice(&parse_const8(word, labels)),
-            Operand::Const16  => program.extend_from_slice(&parse_const16(word, labels)),
-            Operand::Const32  => program.extend_from_slice(&parse_const32(word, labels)),
-            Operand::Const64  => program.extend_from_slice(&parse_const64(word, labels)),
+            Operand::Const8   => program.extend_from_slice(&parse_const8(word, labels)?),
+            Operand::Const16  => program.extend_from_slice(&parse_const16(word, labels)?),
+            Operand::Const32  => program.extend_from_slice(&parse_const32(word, labels)?),
+            Operand::Const64  => program.extend_from_slice(&parse_const64(word, labels)?),
             Operand::Register => program.push(parse_register(word)?),
             Operand::Lock     => program.push(parse_lock(word)?),
             Operand::Thread   => program.push(parse_thread(word)?),
@@ -43,41 +46,49 @@ fn check_integer(word: &str) -> bool {
     word.chars().all(|character| character.is_numeric())
 }
 
-fn parse_label(word: &str, labels: &HashMap<Box<str>, usize>) -> usize {
+fn parse_label(word: &str, labels: &HashMap<Box<str>, usize>) -> ParserResult<usize> {
     let Some(address) = labels.get(word).copied() else {
-        panic!("Label error.");
+        return Err(Box::from("Label not found."));
     };
 
-    address
+    Ok(address)
 }
 
 macro parse_const($type:ty, $word:expr, $labels:expr) {{
     let constant = if check_integer($word) {
-        <$type>::from_str_radix($word, 10).unwrap_or_else(|_| panic!("Constant error."))
+        let Ok(integer) = <$type>::from_str_radix($word, 10) else {
+            return Err(Box::from("Invalid constant integer."));
+        };
+
+        integer
     } else {
-        <$type>::try_from(parse_label($word, $labels)).unwrap_or_else(|_| panic!("Label error."))
+        let Ok(address) = <$type>::try_from(parse_label($word, $labels)?) else {
+            return Err(Box::from("Invalid constant address."));
+        };
+
+        address
     };
 
-    constant.to_be_bytes()
+    Ok(constant.to_be_bytes())
 }}
 
-fn parse_const8(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 1] {
+fn parse_const8(word: &str, labels: &HashMap<Box<str>, usize>) -> ParserResult<[u8; 1]> {
     parse_const!(u8, word, labels)
 }
 
-fn parse_const16(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 2] {
+fn parse_const16(word: &str, labels: &HashMap<Box<str>, usize>) -> ParserResult<[u8; 2]> {
     parse_const!(u16, word, labels)
 }
 
-fn parse_const32(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 4] {
+fn parse_const32(word: &str, labels: &HashMap<Box<str>, usize>) -> ParserResult<[u8; 4]> {
     parse_const!(u32, word, labels)
 }
 
-fn parse_const64(word: &str, labels: &HashMap<Box<str>, usize>) -> [u8; 8] {
+fn parse_const64(word: &str, labels: &HashMap<Box<str>, usize>) -> ParserResult<[u8; 8]> {
     parse_const!(u64, word, labels)
 }
 
-fn parse_register(word: &str) -> Result<u8, Box<str>> {
+fn parse_register(word: &str) -> ParserResult<u8> {
     let (prefix, index) = word.split_at(1);
     if prefix != "r" {
         return Err(Box::from("Wrong register prefix."));
@@ -87,10 +98,14 @@ fn parse_register(word: &str) -> Result<u8, Box<str>> {
         return Err(Box::from("Wrong register index."));
     };
 
+    if register as usize > REGISTERS_COUNT {
+        return Err(Box::from("Invalid register index."));
+    }
+
     Ok(register.to_be())
 }
 
-fn parse_lock(word: &str) -> Result<u8, Box<str>> {
+fn parse_lock(word: &str) -> ParserResult<u8> {
     let (prefix, index) = word.split_at(1);
     if prefix != "l" {
         return Err(Box::from("Wrong lock prefix."));
@@ -100,10 +115,14 @@ fn parse_lock(word: &str) -> Result<u8, Box<str>> {
         return Err(Box::from("Wrong lock index."));
     };
 
+    if lock as usize > LOCKS_COUNT {
+        return Err(Box::from("Invalid lock index."));
+    }
+
     Ok(lock.to_be())
 }
 
-fn parse_thread(word: &str) -> Result<u8, Box<str>> {
+fn parse_thread(word: &str) -> ParserResult<u8> {
     let (prefix, index) = word.split_at(1);
     if prefix != "t" {
         return Err(Box::from("Wrong thread prefix."));
@@ -112,6 +131,10 @@ fn parse_thread(word: &str) -> Result<u8, Box<str>> {
     let Ok(thread) = u8::from_str_radix(index, 10) else {
         return Err(Box::from("Wrong thread index."));
     };
+
+    if thread as usize > THREADS_COUNT {
+        return Err(Box::from("Invalid thread index."));
+    }
 
     Ok(thread.to_be())
 }
