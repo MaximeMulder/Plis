@@ -14,6 +14,8 @@ pub struct Machine<'a> {
     registers: Registers,
     locks: Locks,
     memory: Memory,
+    callbacks: Vec<(usize, Box<dyn Fn(&mut Threads, &mut Registers, &mut Locks, &mut Memory)>)>,
+    counter: usize,
 }
 
 impl<'a> Machine<'a> {
@@ -24,6 +26,8 @@ impl<'a> Machine<'a> {
             registers: Registers::new(),
             locks: Locks::new(),
             memory: Memory::new(),
+            callbacks: Vec::new(),
+            counter: 0,
         }
     }
 
@@ -145,18 +149,20 @@ impl<'a> Machine<'a> {
 
                         let lock = thread.next_lock(self.program);
 
-                        let lock = self.locks.get_mut(lock);
-
-                        lock.lock();
+                        self.callback(0, move |_, _, locks, _| {
+                            let lock = locks.get_mut(lock);
+                            lock.lock();
+                        });
                     },
                     Opcode::Unlock => {
                         let thread = self.threads.get_mut(thread);
 
                         let lock = thread.next_lock(self.program);
 
-                        let lock = self.locks.get_mut(lock);
-
-                        lock.unlock();
+                        self.callback(0, move |_, _, locks, _| {
+                            let lock = locks.get_mut(lock);
+                            lock.unlock();
+                        });
                     },
                     Opcode::Start => {
                         let thread = self.threads.get_mut(thread);
@@ -164,22 +170,26 @@ impl<'a> Machine<'a> {
                         let other   = thread.next_thread(self.program);
                         let address = thread.next_register(self.program);
 
-                        let other   = self.threads.get_mut(other);
                         let address = self.registers.read(address);
 
-                        other.jump(address);
-                        other.active = true;
+                        self.callback(0, move |threads, _, _, _| {
+                            let other = threads.get_mut(other);
+                            other.jump(address);
+                            other.active = true;
+                        });
                     },
                     Opcode::Stop => {
                         let thread = self.threads.get_mut(thread);
 
                         let other = thread.next_thread(self.program);
 
-                        self.threads.get_mut(other).active = false;
+                        self.callback(0, move |threads, _, _, _| {
+                            let other = threads.get_mut(other);
+                            other.active = false;
+                        });
                     },
                     Opcode::End => {
                         let thread = self.threads.get_mut(thread);
-
                         thread.active = false;
                     },
                     Opcode::Scan => {
@@ -206,7 +216,22 @@ impl<'a> Machine<'a> {
                     },
                 }
             }
+
+            self.callbacks.retain(|callback| {
+                if callback.0 != self.counter {
+                    return true;
+                }
+
+                callback.1(&mut self.threads, &mut self.registers, &mut self.locks, &mut self.memory);
+                false
+            });
+
+            self.counter += 1;
         }
+    }
+
+    fn callback(&mut self, delay: usize, callback: impl Fn(&mut Threads, &mut Registers, &mut Locks, &mut Memory) + 'static) {
+        self.callbacks.push((self.counter + delay, Box::new(callback)));
     }
 }
 
@@ -221,43 +246,56 @@ impl Machine<'_> {
         self.registers.write(register, constant);
     }
 
-    fn load(&mut self, thread: ThreadId, closure: impl Fn(&Memory, u64) -> u64) {
+    fn load(&mut self, thread: ThreadId, closure: fn(&Memory, u64) -> u64) {
         let thread = self.threads.get_mut(thread);
 
         let address     = thread.next_register(self.program);
         let destination = thread.next_register(self.program);
-        let _lock       = thread.next_lock(self.program);
+        let lock        = thread.next_lock(self.program);
 
         let address = self.registers.read(address);
-        let value   = closure(&self.memory, address);
+        self.locks.get_mut(lock).lock();
 
-        self.registers.write(destination, value);
+        self.callback(0, move |_, registers, locks, memory| {
+            let value = closure(memory, address);
+            registers.write(destination, value);
+            locks.get_mut(lock).unlock();
+        });
     }
 
-    fn store(&mut self, thread: ThreadId, closure: impl Fn(&mut Memory, u64, u64)) {
+    fn store(&mut self, thread: ThreadId, closure: fn(&mut Memory, u64, u64)) {
         let thread = self.threads.get_mut(thread);
 
         let source      = thread.next_register(self.program);
         let destination = thread.next_register(self.program);
-        let _lock       = thread.next_lock(self.program);
+        let lock        = thread.next_lock(self.program);
 
         let address = self.registers.read(destination);
         let value   = self.registers.read(source);
+        self.locks.get_mut(lock).lock();
 
-        closure(&mut self.memory, address, value);
+        self.callback(0, move |_, _, locks, memory| {
+            closure(memory, address, value);
+            locks.get_mut(lock).unlock();
+        });
     }
 
-    fn calcul(&mut self, thread: ThreadId, closure: impl Fn(u64, u64) -> u64) {
+    fn calcul(&mut self, thread: ThreadId, closure: fn(u64, u64) -> u64) {
         let thread = self.threads.get_mut(thread);
 
         let a      = thread.next_register(self.program);
         let b      = thread.next_register(self.program);
         let result = thread.next_register(self.program);
-        let _lock  = thread.next_lock(self.program);
+        let lock   = thread.next_lock(self.program);
 
         let a = self.registers.read(a);
         let b = self.registers.read(b);
+        self.locks.get_mut(lock).lock();
 
-        self.registers.write(result, closure(a, b));
+        self.callback(0, move |_, registers, locks, _| {
+            let value = closure(a, b);
+            registers.write(result, value);
+            locks.get_mut(lock).unlock();
+        });
     }
 }
