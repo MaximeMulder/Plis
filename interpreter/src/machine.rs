@@ -7,6 +7,7 @@ use crate::memory::Memory;
 use crate::program::Program;
 use crate::register::Registers;
 use crate::thread::{ Threads, ThreadId, Thread };
+use crate::time::*;
 
 pub struct Machine<'a> {
     program: &'a Program,
@@ -32,14 +33,11 @@ impl<'a> Machine<'a> {
     }
 
     pub fn run(&mut self) {
-        self.threads.get_mut(ThreadId::from_raw(0)).active = true;
+        self.threads.get_mut(ThreadId::from_raw(0)).start();
         loop {
             for thread in self.threads.iterate() {
-                {
-                    let thread = self.threads.get(thread);
-                    if !thread.active {
-                        continue;
-                    }
+                if !self.threads.get(thread).is_active() {
+                    continue;
                 }
 
                 let opcode = self.threads.get_mut(thread).next_opcode(self.program);
@@ -82,34 +80,34 @@ impl<'a> Machine<'a> {
                         self.store(thread, |memory, address, value| memory.set_64(address, value));
                     },
                     Opcode::And => {
-                        self.calcul(thread, |a, b| a & b);
+                        self.calcul(thread, TIME_AND, |a, b| a & b);
                     },
                     Opcode::Or => {
-                        self.calcul(thread, |a, b| a | b);
+                        self.calcul(thread, TIME_OR, |a, b| a | b);
                     },
                     Opcode::Xor => {
-                        self.calcul(thread, |a, b| a ^ b);
+                        self.calcul(thread, TIME_XOR, |a, b| a ^ b);
                     },
                     Opcode::ShiftL => {
-                        self.calcul(thread, |a, b| a << b);
+                        self.calcul(thread, TIME_SHL, |a, b| a << b);
                     },
                     Opcode::ShiftR => {
-                        self.calcul(thread, |a, b| a >> b);
+                        self.calcul(thread, TIME_SHR, |a, b| a >> b);
                     },
                     Opcode::Add => {
-                        self.calcul(thread, |a, b| a + b);
+                        self.calcul(thread, TIME_ADD, |a, b| a + b);
                     },
                     Opcode::Sub => {
-                        self.calcul(thread, |a, b| a - b);
+                        self.calcul(thread, TIME_SUB, |a, b| a - b);
                     },
                     Opcode::Mul => {
-                        self.calcul(thread, |a, b| a * b);
+                        self.calcul(thread, TIME_MUL, |a, b| a * b);
                     },
                     Opcode::Div => {
-                        self.calcul(thread, |a, b| a / b);
+                        self.calcul(thread, TIME_DIV, |a, b| a / b);
                     },
                     Opcode::Rem => {
-                        self.calcul(thread, |a, b| a % b);
+                        self.calcul(thread, TIME_REM, |a, b| a % b);
                     },
                     Opcode::Jump => {
                         let thread = self.threads.get_mut(thread);
@@ -138,10 +136,8 @@ impl<'a> Machine<'a> {
 
                         let lock = thread.next_lock(self.program);
 
-                        let lock = self.locks.get(lock);
-
-                        if lock.locked() {
-                            thread.wait();
+                        if self.locks.get(lock).locked() {
+                            thread.wait(lock);
                         }
                     },
                     Opcode::Lock => {
@@ -159,9 +155,14 @@ impl<'a> Machine<'a> {
 
                         let lock = thread.next_lock(self.program);
 
-                        self.callback(0, move |_, _, locks, _| {
-                            let lock = locks.get_mut(lock);
-                            lock.unlock();
+                        self.callback(0, move |threads, _, locks, _| {
+                            locks.get_mut(lock).unlock();
+                            for thread in threads.iterate() {
+                                let thread = threads.get_mut(thread);
+                                if thread.is_waiting(lock) {
+                                    thread.start();
+                                }
+                            }
                         });
                     },
                     Opcode::Start => {
@@ -175,7 +176,7 @@ impl<'a> Machine<'a> {
                         self.callback(0, move |threads, _, _, _| {
                             let other = threads.get_mut(other);
                             other.jump(address);
-                            other.active = true;
+                            other.start();
                         });
                     },
                     Opcode::Stop => {
@@ -185,12 +186,13 @@ impl<'a> Machine<'a> {
 
                         self.callback(0, move |threads, _, _, _| {
                             let other = threads.get_mut(other);
-                            other.active = false;
+                            other.stop();
                         });
                     },
                     Opcode::End => {
                         let thread = self.threads.get_mut(thread);
-                        thread.active = false;
+
+                        thread.stop();
                     },
                     Opcode::Scan => {
                         let thread = self.threads.get_mut(thread);
@@ -256,10 +258,16 @@ impl Machine<'_> {
         let address = self.registers.read(address);
         self.locks.get_mut(lock).lock();
 
-        self.callback(0, move |_, registers, locks, memory| {
+        self.callback(TIME_LOAD, move |threads, registers, locks, memory| {
             let value = closure(memory, address);
             registers.write(destination, value);
             locks.get_mut(lock).unlock();
+            for thread in threads.iterate() {
+                let thread = threads.get_mut(thread);
+                if thread.is_waiting(lock) {
+                    thread.start();
+                }
+            }
         });
     }
 
@@ -274,13 +282,19 @@ impl Machine<'_> {
         let value   = self.registers.read(source);
         self.locks.get_mut(lock).lock();
 
-        self.callback(0, move |_, _, locks, memory| {
+        self.callback(TIME_STORE, move |threads, _, locks, memory| {
             closure(memory, address, value);
             locks.get_mut(lock).unlock();
+            for thread in threads.iterate() {
+                let thread = threads.get_mut(thread);
+                if thread.is_waiting(lock) {
+                    thread.start();
+                }
+            }
         });
     }
 
-    fn calcul(&mut self, thread: ThreadId, closure: fn(u64, u64) -> u64) {
+    fn calcul(&mut self, thread: ThreadId, delay: usize, closure: fn(u64, u64) -> u64) {
         let thread = self.threads.get_mut(thread);
 
         let a      = thread.next_register(self.program);
@@ -292,10 +306,16 @@ impl Machine<'_> {
         let b = self.registers.read(b);
         self.locks.get_mut(lock).lock();
 
-        self.callback(0, move |_, registers, locks, _| {
+        self.callback(delay, move |threads, registers, locks, _| {
             let value = closure(a, b);
             registers.write(result, value);
             locks.get_mut(lock).unlock();
+            for thread in threads.iterate() {
+                let thread = threads.get_mut(thread);
+                if thread.is_waiting(lock) {
+                    thread.start();
+                }
+            }
         });
     }
 }

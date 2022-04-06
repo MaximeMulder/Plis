@@ -20,20 +20,6 @@ impl Locks {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct LockId(u8);
-
-impl LockId {
-    pub fn from_raw(raw: u8) -> Self {
-        assert!((raw as usize) < LOCKS_COUNT);
-        Self(raw)
-    }
-
-    pub fn to_raw(id: LockId) -> usize {
-        id.0 as usize
-    }
-}
-
 pub struct Lock {
     locked: bool,
 }
@@ -55,5 +41,19 @@ impl Lock {
 
     pub fn unlock(&mut self) {
         self.locked = false;
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct LockId(u8);
+
+impl LockId {
+    pub fn from_raw(raw: u8) -> Self {
+        assert!((raw as usize) < LOCKS_COUNT);
+        Self(raw)
+    }
+
+    pub fn to_raw(id: LockId) -> usize {
+        id.0 as usize
     }
 }

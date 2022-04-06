@@ -5,6 +5,7 @@ mod machine;
 mod memory;
 mod program;
 mod thread;
+mod time;
 mod register;
 
 use std::env::args;

@@ -1,0 +1,43 @@
+const8 r1, thread1
+const8 r2, thread2
+const8 r3, thread3
+const8 r4, thread4
+const8 r5, 0
+const8 r6, 0
+const8 r7, 0
+const8 r8, 0
+const8 r9, 1
+const8 r10, 2
+const8 r11, 3
+const8 r12, 4
+lock l5
+start t1, r1
+start t2, r2
+start t3, r3
+start t4, r4
+unlock l5
+end
+thread1:
+    wait l5
+    add r5, r9, r5, l1
+    wait l1
+    print r5
+    jump r1
+thread2:
+    wait l5
+    add r6, r10, r6, l2
+    wait l2
+    print r6
+    jump r2
+thread3:
+    wait l5
+    add r7, r11, r7, l3
+    wait l3
+    print r7
+    jump r3
+thread4:
+    wait l5
+    add r8, r12, r8, l4
+    wait l4
+    print r8
+    jump r4

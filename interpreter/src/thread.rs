@@ -28,30 +28,35 @@ impl Threads {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct ThreadId(u8);
-
-impl ThreadId {
-    pub fn from_raw(raw: u8) -> Self {
-        assert!((raw as usize) < THREADS_COUNT);
-        Self(raw)
-    }
-
-    pub fn to_raw(id: ThreadId) -> usize {
-        id.0 as usize
-    }
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ThreadStatus {
+    Active,
+    Inactive,
+    Waiting(LockId),
 }
 
 pub struct Thread {
-    pub active: bool,
+    active: ThreadStatus,
     cursor: u64,
 }
 
 impl Thread {
     pub fn new() -> Self {
         Self {
-            active: false,
+            active: ThreadStatus::Inactive,
             cursor: 0,
+        }
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.active == ThreadStatus::Active
+    }
+
+    pub fn is_waiting(&self, other: LockId) -> bool {
+        if let ThreadStatus::Waiting(lock) = self.active {
+            lock == other
+        } else {
+            false
         }
     }
 
@@ -59,8 +64,16 @@ impl Thread {
         self.cursor = cursor;
     }
 
-    pub fn wait(&mut self) {
-        self.cursor -= 2;
+    pub fn start(&mut self) {
+        self.active = ThreadStatus::Active;
+    }
+
+    pub fn stop(&mut self) {
+        self.active = ThreadStatus::Inactive;
+    }
+
+    pub fn wait(&mut self, lock: LockId) {
+        self.active = ThreadStatus::Waiting(lock);
     }
 }
 
@@ -111,5 +124,19 @@ impl Thread {
         let value = program.get_64(self.cursor);
         self.cursor += 8;
         value
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct ThreadId(u8);
+
+impl ThreadId {
+    pub fn from_raw(raw: u8) -> Self {
+        assert!((raw as usize) < THREADS_COUNT);
+        Self(raw)
+    }
+
+    pub fn to_raw(id: ThreadId) -> usize {
+        id.0 as usize
     }
 }
