@@ -8,16 +8,18 @@ use crate::program::Program;
 use crate::register::Registers;
 use crate::thread::{ Threads, ThreadId, Thread };
 
-pub struct Machine {
+pub struct Machine<'a> {
+    program: &'a Program,
     threads: Threads,
     registers: Registers,
     locks: Locks,
     memory: Memory,
 }
 
-impl Machine {
-    pub fn new() -> Self {
+impl<'a> Machine<'a> {
+    pub fn new(program: &'a Program) -> Self {
         Self {
+            program,
             threads: Threads::new(),
             registers: Registers::new(),
             locks: Locks::new(),
@@ -25,142 +27,178 @@ impl Machine {
         }
     }
 
-    pub fn run(&mut self, program: &Program) {
+    pub fn run(&mut self) {
         self.threads.get_mut(ThreadId::from_raw(0)).active = true;
         loop {
-            for id in self.threads.iter_ids() {
-                let thread = self.threads.get(id);
-                if !thread.active {
-                    continue;
+            for thread in self.threads.iterate() {
+                {
+                    let thread = self.threads.get(thread);
+                    if !thread.active {
+                        continue;
+                    }
                 }
 
-                let opcode = self.threads.get_mut(id).next_opcode(program);
+                let opcode = self.threads.get_mut(thread).next_opcode(self.program);
                 match opcode {
                     Opcode::Nop => {},
                     Opcode::Const8 => {
-                        self.constant(id, program, |thread, program| thread.next_const8(program));
+                        self.constant(thread, |thread, program| thread.next_const8(program));
                     },
                     Opcode::Const16 => {
-                        self.constant(id, program, |thread, program| thread.next_const16(program));
+                        self.constant(thread, |thread, program| thread.next_const16(program));
                     },
                     Opcode::Const32 => {
-                        self.constant(id, program, |thread, program| thread.next_const32(program));
+                        self.constant(thread, |thread, program| thread.next_const32(program));
                     },
                     Opcode::Const64 => {
-                        self.constant(id, program, |thread, program| thread.next_const64(program));
+                        self.constant(thread, |thread, program| thread.next_const64(program));
                     },
                     Opcode::Load8 => {
-                        self.load(id, program, |memory, address| memory.get_8(address));
+                        self.load(thread, |memory, address| memory.get_8(address));
                     },
                     Opcode::Load16 => {
-                        self.load(id, program, |memory, address| memory.get_16(address));
+                        self.load(thread, |memory, address| memory.get_16(address));
                     },
                     Opcode::Load32 => {
-                        self.load(id, program, |memory, address| memory.get_32(address));
+                        self.load(thread, |memory, address| memory.get_32(address));
                     },
                     Opcode::Load64 => {
-                        self.load(id, program, |memory, address| memory.get_64(address));
+                        self.load(thread, |memory, address| memory.get_64(address));
                     },
                     Opcode::Store8 => {
-                        self.store(id, program, |memory, address, value| memory.set_8(address, value as u8));
+                        self.store(thread, |memory, address, value| memory.set_8(address, value as u8));
                     },
                     Opcode::Store16 => {
-                        self.store(id, program, |memory, address, value| memory.set_16(address, value as u16));
+                        self.store(thread, |memory, address, value| memory.set_16(address, value as u16));
                     },
                     Opcode::Store32 => {
-                        self.store(id, program, |memory, address, value| memory.set_32(address, value as u32));
+                        self.store(thread, |memory, address, value| memory.set_32(address, value as u32));
                     },
                     Opcode::Store64 => {
-                        self.store(id, program, |memory, address, value| memory.set_64(address, value));
+                        self.store(thread, |memory, address, value| memory.set_64(address, value));
                     },
                     Opcode::And => {
-                        self.calcul(id, program, |a, b| a & b);
+                        self.calcul(thread, |a, b| a & b);
                     },
                     Opcode::Or => {
-                        self.calcul(id, program, |a, b| a | b);
+                        self.calcul(thread, |a, b| a | b);
                     },
                     Opcode::Xor => {
-                        self.calcul(id, program, |a, b| a ^ b);
+                        self.calcul(thread, |a, b| a ^ b);
                     },
                     Opcode::ShiftL => {
-                        self.calcul(id, program, |a, b| a << b);
+                        self.calcul(thread, |a, b| a << b);
                     },
                     Opcode::ShiftR => {
-                        self.calcul(id, program, |a, b| a >> b);
+                        self.calcul(thread, |a, b| a >> b);
                     },
                     Opcode::Add => {
-                        self.calcul(id, program, |a, b| a + b);
+                        self.calcul(thread, |a, b| a + b);
                     },
                     Opcode::Sub => {
-                        self.calcul(id, program, |a, b| a - b);
+                        self.calcul(thread, |a, b| a - b);
                     },
                     Opcode::Mul => {
-                        self.calcul(id, program, |a, b| a * b);
+                        self.calcul(thread, |a, b| a * b);
                     },
                     Opcode::Div => {
-                        self.calcul(id, program, |a, b| a / b);
+                        self.calcul(thread, |a, b| a / b);
                     },
                     Opcode::Rem => {
-                        self.calcul(id, program, |a, b| a % b);
+                        self.calcul(thread, |a, b| a % b);
                     },
                     Opcode::Jump => {
-                        let thread = self.threads.get_mut(id);
-                        let address = self.registers.get(thread.next_register(program));
+                        let thread = self.threads.get_mut(thread);
+
+                        let address = thread.next_register(self.program);
+
+                        let address = self.registers.read(address);
+
                         thread.jump(address);
                     },
                     Opcode::JumpIf => {
-                        let thread = self.threads.get_mut(id);
-                        let address = self.registers.get(thread.next_register(program));
-                        let condition = self.registers.get(thread.next_register(program));
+                        let thread = self.threads.get_mut(thread);
+
+                        let address   = thread.next_register(self.program);
+                        let condition = thread.next_register(self.program);
+
+                        let address   = self.registers.read(address);
+                        let condition = self.registers.read(condition);
+
                         if condition != 0 {
                             thread.jump(address);
                         }
                     },
                     Opcode::Wait => {
-                        let thread = self.threads.get_mut(id);
-                        let lock = self.locks.get(thread.next_lock(program));
+                        let thread = self.threads.get_mut(thread);
+
+                        let lock = thread.next_lock(self.program);
+
+                        let lock = self.locks.get(lock);
+
                         if lock.locked() {
                             thread.wait();
                         }
                     },
                     Opcode::Lock => {
-                        let thread = self.threads.get_mut(id);
-                        let lock = self.locks.get_mut(thread.next_lock(program));
+                        let thread = self.threads.get_mut(thread);
+
+                        let lock = thread.next_lock(self.program);
+
+                        let lock = self.locks.get_mut(lock);
+
                         lock.lock();
                     },
                     Opcode::Unlock => {
-                        let thread = self.threads.get_mut(id);
-                        let lock = self.locks.get_mut(thread.next_lock(program));
+                        let thread = self.threads.get_mut(thread);
+
+                        let lock = thread.next_lock(self.program);
+
+                        let lock = self.locks.get_mut(lock);
+
                         lock.unlock();
                     },
                     Opcode::Start => {
-                        let thread = self.threads.get_mut(id);
-                        let id = thread.next_thread(program);
-                        let address = self.registers.get(thread.next_register(program));
-                        let other = self.threads.get_mut(id);
+                        let thread = self.threads.get_mut(thread);
+
+                        let other   = thread.next_thread(self.program);
+                        let address = thread.next_register(self.program);
+
+                        let other   = self.threads.get_mut(other);
+                        let address = self.registers.read(address);
+
                         other.jump(address);
                         other.active = true;
                     },
                     Opcode::Stop => {
-                        let thread = self.threads.get_mut(id);
-                        let other = thread.next_thread(program);
+                        let thread = self.threads.get_mut(thread);
+
+                        let other = thread.next_thread(self.program);
+
                         self.threads.get_mut(other).active = false;
                     },
                     Opcode::End => {
-                        let thread = self.threads.get_mut(id);
+                        let thread = self.threads.get_mut(thread);
+
                         thread.active = false;
                     },
                     Opcode::Scan => {
-                        let thread = self.threads.get_mut(id);
-                        let result = thread.next_register(program);
+                        let thread = self.threads.get_mut(thread);
+
+                        let result = thread.next_register(self.program);
+
                         let mut input = String::new();
                         stdin().read_line(&mut input).unwrap();
                         let integer = input.trim().parse::<u64>().unwrap();
-                        self.registers.set(result, integer);
+                        self.registers.write(result, integer);
                     },
                     Opcode::Print => {
-                        let thread = self.threads.get_mut(id);
-                        let value = self.registers.get(thread.next_register(program));
+                        let thread = self.threads.get_mut(thread);
+
+                        let value = thread.next_register(self.program);
+
+                        let value = self.registers.read(value);
+
                         println!("{}", value);
                     },
                     Opcode::Exit => {
@@ -172,39 +210,54 @@ impl Machine {
     }
 }
 
-impl Machine {
-    fn constant(&mut self, id: ThreadId, program: &Program, closure: impl Fn(&mut Thread, &Program) -> u64) {
-        let thread = self.threads.get_mut(id);
-        let register = thread.next_register(program);
-        let constant = closure(thread, program);
-        self.registers.set(register, constant);
+impl Machine<'_> {
+    fn constant(&mut self, thread: ThreadId, closure: impl Fn(&mut Thread, &Program) -> u64) {
+        let thread = self.threads.get_mut(thread);
+
+        let register = thread.next_register(self.program);
+
+        let constant = closure(thread, self.program);
+
+        self.registers.write(register, constant);
     }
 
-    fn load(&mut self, id: ThreadId, program: &Program, closure: impl Fn(&Memory, u64) -> u64) {
-        let thread = self.threads.get_mut(id);
-        let source = thread.next_register(program);
-        let destination = thread.next_register(program);
-        let _lock = thread.next_lock(program);
-        let value = closure(&self.memory, self.registers.get(source));
-        self.registers.set(destination, value);
+    fn load(&mut self, thread: ThreadId, closure: impl Fn(&Memory, u64) -> u64) {
+        let thread = self.threads.get_mut(thread);
+
+        let address     = thread.next_register(self.program);
+        let destination = thread.next_register(self.program);
+        let _lock       = thread.next_lock(self.program);
+
+        let address = self.registers.read(address);
+        let value   = closure(&self.memory, address);
+
+        self.registers.write(destination, value);
     }
 
-    fn store(&mut self, id: ThreadId, program: &Program, closure: impl Fn(&mut Memory, u64, u64)) {
-        let thread = self.threads.get_mut(id);
-        let source = thread.next_register(program);
-        let destination = thread.next_register(program);
-        let _lock = thread.next_lock(program);
-        let address = self.registers.get(destination);
-        let value = self.registers.get(source);
+    fn store(&mut self, thread: ThreadId, closure: impl Fn(&mut Memory, u64, u64)) {
+        let thread = self.threads.get_mut(thread);
+
+        let source      = thread.next_register(self.program);
+        let destination = thread.next_register(self.program);
+        let _lock       = thread.next_lock(self.program);
+
+        let address = self.registers.read(destination);
+        let value   = self.registers.read(source);
+
         closure(&mut self.memory, address, value);
     }
 
-    fn calcul(&mut self, id: ThreadId, program: &Program, closure: impl Fn(u64, u64) -> u64) {
-        let thread = self.threads.get_mut(id);
-        let a = self.registers.get(thread.next_register(program));
-        let b = self.registers.get(thread.next_register(program));
-        let result = thread.next_register(program);
-        let _lock = thread.next_lock(program);
-        self.registers.set(result, closure(a, b));
+    fn calcul(&mut self, thread: ThreadId, closure: impl Fn(u64, u64) -> u64) {
+        let thread = self.threads.get_mut(thread);
+
+        let a      = thread.next_register(self.program);
+        let b      = thread.next_register(self.program);
+        let result = thread.next_register(self.program);
+        let _lock  = thread.next_lock(self.program);
+
+        let a = self.registers.read(a);
+        let b = self.registers.read(b);
+
+        self.registers.write(result, closure(a, b));
     }
 }

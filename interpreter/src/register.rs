@@ -11,11 +11,11 @@ impl Registers {
         }
     }
 
-    pub fn get(&self, id: RegisterId) -> u64 {
+    pub fn read(&self, id: RegisterId) -> u64 {
         self.registers[id.to_raw()]
     }
 
-    pub fn set(&mut self, id: RegisterId, value: u64) {
+    pub fn write(&mut self, id: RegisterId, value: u64) {
         self.registers[id.to_raw()] = value;
     }
 }

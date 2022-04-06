@@ -23,7 +23,7 @@ impl Threads {
         &mut self.threads[ThreadId::to_raw(id)]
     }
 
-    pub fn iter_ids(&self) -> impl Iterator<Item = ThreadId> {
+    pub fn iterate(&self) -> impl Iterator<Item = ThreadId> {
         (0 as u8 .. THREADS_COUNT as u8).map(|i| ThreadId::from_raw(i))
     }
 }
@@ -55,6 +55,16 @@ impl Thread {
         }
     }
 
+    pub fn jump(&mut self, cursor: u64) {
+        self.cursor = cursor;
+    }
+
+    pub fn wait(&mut self) {
+        self.cursor -= 2;
+    }
+}
+
+impl Thread {
     pub fn next_opcode(&mut self, program: &Program) -> Opcode {
         let opcode = program.get_8(self.cursor);
         self.cursor += 1;
@@ -101,13 +111,5 @@ impl Thread {
         let value = program.get_64(self.cursor);
         self.cursor += 8;
         value
-    }
-
-    pub fn jump(&mut self, cursor: u64) {
-        self.cursor = cursor;
-    }
-
-    pub fn wait(&mut self) {
-        self.cursor -= 2;
     }
 }

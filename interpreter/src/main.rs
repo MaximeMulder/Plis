@@ -21,8 +21,8 @@ fn main() {
 
     let input = get_input_path(&arguments[1]);
     let program = Program::new(std::fs::read(input).unwrap().into_boxed_slice());
-    let mut machine = Machine::new();
-    machine.run(&program);
+    let mut machine = Machine::new(&program);
+    machine.run();
 }
 
 fn get_input_path(argument: &str) -> &Path {
