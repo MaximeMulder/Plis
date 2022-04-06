@@ -42,9 +42,7 @@ impl Assembler {
 
             address += 1;
             let operands = opcode_operands(opcode);
-            parser.with_operands(operands, |operand, _| {
-                address += operand.size();
-            });
+            parser.with_operands(operands, &mut address);
         }
 
         labels
@@ -75,27 +73,27 @@ impl Assembler {
 }
 
 impl Parser<'_> {
-    fn with_operands(&mut self, operands: &[Operand], mut closure: impl FnMut(Operand, &str)) {
+    fn with_operands(&mut self, operands: &[Operand], cursor: &mut usize) {
         let mut iterator = operands.iter().copied();
         let Some(operand) = iterator.next() else {
             return;
         };
 
-        self.with_operand(operand, |operand, word| closure(operand, word));
+        self.with_operand(operand, cursor);
         for operand in iterator {
             if !self.next_comma() {
                 self.error("Missing comma.");
             }
 
-            self.with_operand(operand, |operand, word| closure(operand, word));
+            self.with_operand(operand, cursor);
         }
     }
 
-    fn with_operand(&mut self, operand: Operand, mut closure: impl FnMut(Operand, &str)) {
-        let Some(word) = self.next_word() else {
+    fn with_operand(&mut self, operand: Operand, cursor: &mut usize) {
+        if self.next_word().is_none() {
             self.error("Missing operand.");
         };
 
-        closure(operand, word);
+        *cursor += operand.size();
     }
 }

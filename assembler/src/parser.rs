@@ -4,6 +4,7 @@ pub type ParserResult<T> = Result<T, Box<str>>;
 
 pub struct Parser<'a> {
     text: &'a str,
+    previous: usize,
     cursor: usize,
 }
 
@@ -11,6 +12,7 @@ impl<'a> Parser<'a> {
     pub fn new(text: &'a str) -> Self {
         Self {
             text,
+            previous: 0,
             cursor: 0,
         }
     }
@@ -31,7 +33,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn error(&self, message: &str) -> ! {
-        println!("ERROR POSITION {}: {}", self.cursor, message);
+        println!("ERROR POSITION {}: {}", self.previous, message);
         exit(0);
     }
 }
@@ -41,10 +43,8 @@ impl<'a> Parser<'a> {
         self.text[self.cursor..].chars().next()
     }
 
-    fn advance(&mut self, character: char) -> usize {
-        let length = character.len_utf8();
-        self.cursor += length;
-        length
+    fn advance(&mut self, character: char) {
+        self.cursor += character.len_utf8();
     }
 
     fn next(&mut self) {
@@ -55,6 +55,8 @@ impl<'a> Parser<'a> {
 
             self.advance(character);
         }
+
+        self.previous = self.cursor;
     }
 
     fn comma(&mut self) -> bool {
@@ -84,19 +86,18 @@ impl<'a> Parser<'a> {
     }
 
     fn word(&mut self) -> Option<&str> {
-        let mut length = 0;
         while let Some(character) = self.lookahead() {
             if !character.is_alphanumeric() {
                 break;
             }
 
-            length += self.advance(character);
+            self.advance(character);
         }
 
-        if length == 0 {
+        if self.cursor == self.previous {
             return None;
         }
 
-        Some(&self.text[self.cursor - length .. self.cursor])
+        Some(&self.text[self.previous .. self.cursor])
     }
 }
