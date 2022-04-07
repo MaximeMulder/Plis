@@ -1,12 +1,13 @@
 use std::io::stdin;
+use std::rc::Rc;
 
 use architecture::Opcode;
 
-use crate::lock::Locks;
+use crate::lock::{ Locks, LockId };
 use crate::memory::Memory;
 use crate::program::Program;
 use crate::register::Registers;
-use crate::thread::{ Threads, ThreadId, Thread };
+use crate::thread::{ Threads, Thread, ThreadId };
 use crate::time::*;
 
 pub struct Machine<'a> {
@@ -15,7 +16,7 @@ pub struct Machine<'a> {
     registers: Registers,
     locks: Locks,
     memory: Memory,
-    callbacks: Vec<(usize, Box<dyn Fn(&mut Threads, &mut Registers, &mut Locks, &mut Memory)>)>,
+    callbacks: Vec<(usize, Rc<dyn Fn(&mut Machine)>)>,
     counter: usize,
 }
 
@@ -145,8 +146,8 @@ impl<'a> Machine<'a> {
 
                         let lock = thread.next_lock(self.program);
 
-                        self.callback(0, move |_, _, locks, _| {
-                            let lock = locks.get_mut(lock);
+                        self.callback(move |machine| {
+                            let lock = machine.locks.get_mut(lock);
                             lock.lock();
                         });
                     },
@@ -155,14 +156,8 @@ impl<'a> Machine<'a> {
 
                         let lock = thread.next_lock(self.program);
 
-                        self.callback(0, move |threads, _, locks, _| {
-                            locks.get_mut(lock).unlock();
-                            for thread in threads.iterate() {
-                                let thread = threads.get_mut(thread);
-                                if thread.is_waiting(lock) {
-                                    thread.start();
-                                }
-                            }
+                        self.callback(move |machine| {
+                            machine.unlock(lock);
                         });
                     },
                     Opcode::Start => {
@@ -173,8 +168,8 @@ impl<'a> Machine<'a> {
 
                         let address = self.registers.read(address);
 
-                        self.callback(0, move |threads, _, _, _| {
-                            let other = threads.get_mut(other);
+                        self.callback(move |machine| {
+                            let other = machine.threads.get_mut(other);
                             other.jump(address);
                             other.start();
                         });
@@ -184,8 +179,8 @@ impl<'a> Machine<'a> {
 
                         let other = thread.next_thread(self.program);
 
-                        self.callback(0, move |threads, _, _, _| {
-                            let other = threads.get_mut(other);
+                        self.callback(move |machine| {
+                            let other = machine.threads.get_mut(other);
                             other.stop();
                         });
                     },
@@ -219,21 +214,18 @@ impl<'a> Machine<'a> {
                 }
             }
 
-            self.callbacks.retain(|callback| {
+            for callback in self.callbacks.clone() {
                 if callback.0 != self.counter {
-                    return true;
+                    continue;
                 }
 
-                callback.1(&mut self.threads, &mut self.registers, &mut self.locks, &mut self.memory);
-                false
-            });
+                callback.1(self);
+            }
+
+            self.callbacks.retain(|callback| callback.0 != self.counter);
 
             self.counter += 1;
         }
-    }
-
-    fn callback(&mut self, delay: usize, callback: impl Fn(&mut Threads, &mut Registers, &mut Locks, &mut Memory) + 'static) {
-        self.callbacks.push((self.counter + delay, Box::new(callback)));
     }
 }
 
@@ -258,16 +250,10 @@ impl Machine<'_> {
         let address = self.registers.read(address);
         self.locks.get_mut(lock).lock();
 
-        self.callback(TIME_LOAD, move |threads, registers, locks, memory| {
-            let value = closure(memory, address);
-            registers.write(destination, value);
-            locks.get_mut(lock).unlock();
-            for thread in threads.iterate() {
-                let thread = threads.get_mut(thread);
-                if thread.is_waiting(lock) {
-                    thread.start();
-                }
-            }
+        self.callback_delay(TIME_LOAD, move |machine| {
+            let value = closure(&machine.memory, address);
+            machine.registers.write(destination, value);
+            machine.unlock(lock);
         });
     }
 
@@ -282,15 +268,9 @@ impl Machine<'_> {
         let value   = self.registers.read(source);
         self.locks.get_mut(lock).lock();
 
-        self.callback(TIME_STORE, move |threads, _, locks, memory| {
-            closure(memory, address, value);
-            locks.get_mut(lock).unlock();
-            for thread in threads.iterate() {
-                let thread = threads.get_mut(thread);
-                if thread.is_waiting(lock) {
-                    thread.start();
-                }
-            }
+        self.callback_delay(TIME_STORE, move |machine| {
+            closure(&mut machine.memory, address, value);
+            machine.unlock(lock);
         });
     }
 
@@ -306,16 +286,30 @@ impl Machine<'_> {
         let b = self.registers.read(b);
         self.locks.get_mut(lock).lock();
 
-        self.callback(delay, move |threads, registers, locks, _| {
+        self.callback_delay(delay, move |machine| {
             let value = closure(a, b);
-            registers.write(result, value);
-            locks.get_mut(lock).unlock();
-            for thread in threads.iterate() {
-                let thread = threads.get_mut(thread);
-                if thread.is_waiting(lock) {
-                    thread.start();
-                }
-            }
+            machine.registers.write(result, value);
+            machine.unlock(lock);
         });
+    }
+}
+
+impl Machine<'_> {
+    fn callback(&mut self, callback: impl Fn(&mut Machine) + 'static) {
+        self.callbacks.push((self.counter, Rc::new(callback)));
+    }
+
+    fn callback_delay(&mut self, delay: usize, callback: impl Fn(&mut Machine) + 'static) {
+        self.callbacks.push((self.counter + delay, Rc::new(callback)));
+    }
+
+    fn unlock(&mut self, lock: LockId) {
+        self.locks.get_mut(lock).unlock();
+        for thread in self.threads.iterate() {
+            let thread = self.threads.get_mut(thread);
+            if thread.is_waiting(lock) {
+                thread.start();
+            }
+        }
     }
 }
