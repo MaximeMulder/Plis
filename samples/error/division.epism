@@ -1,0 +1,4 @@
+const8 r0, 1
+const8 r1, 0
+div r0, r1, r2, l0
+end

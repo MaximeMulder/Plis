@@ -1,3 +1,5 @@
+use std::process::exit;
+
 pub struct Program {
     program: Box<[u8]>,
 }
@@ -9,25 +11,47 @@ impl Program {
         }
     }
 
+    pub fn get(&self, cursor: u64) -> u8 {
+        self.program.get(cursor as usize).copied().unwrap_or_else(|| self.error_program("Program cursor out of bounds."))
+    }
+
     pub fn get_8(&self, cursor: u64) -> u8 {
-        self.program[cursor as usize]
+        u8::from_be_bytes([
+            self.get(cursor),
+        ])
     }
 
     pub fn get_16(&self, cursor: u64) -> u16 {
-        let high = self.get_8(cursor) as u16;
-        let low = self.get_8(cursor + 1) as u16;
-        high << 8 | low
+        u16::from_be_bytes([
+            self.get(cursor + 0),
+            self.get(cursor + 1),
+        ])
     }
 
     pub fn get_32(&self, cursor: u64) -> u32 {
-        let high = self.get_16(cursor) as u32;
-        let low = self.get_16(cursor + 2) as u32;
-        high << 16 | low
+        u32::from_be_bytes([
+            self.get(cursor + 0),
+            self.get(cursor + 1),
+            self.get(cursor + 2),
+            self.get(cursor + 3),
+        ])
     }
 
     pub fn get_64(&self, cursor: u64) -> u64 {
-        let high = self.get_32(cursor) as u64;
-        let low = self.get_32(cursor + 4) as u64;
-        high << 32 | low
+        u64::from_be_bytes([
+            self.get(cursor + 0),
+            self.get(cursor + 1),
+            self.get(cursor + 2),
+            self.get(cursor + 3),
+            self.get(cursor + 4),
+            self.get(cursor + 5),
+            self.get(cursor + 6),
+            self.get(cursor + 7),
+        ])
+    }
+
+    fn error_program(&self, message: &str) -> ! {
+        eprintln!("ERROR: {}", message);
+        exit(0);
     }
 }

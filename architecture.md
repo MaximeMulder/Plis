@@ -444,3 +444,11 @@ Size: 1
 
 Description:
 - Exits the program, ending the execution of all the threads.
+
+## Errors
+
+- Deadlock: No thread can proceed in the program.
+- Cursor out of bounds: Tried to read the program out of its bounds.
+- Division by zero: Tried to divide by zero.
+- Input read: Failed to read the user input.
+- Input parse: Failed to parse the user input into an integer.

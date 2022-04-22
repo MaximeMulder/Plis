@@ -1,3 +1,5 @@
+use std::fmt::{ Display, Formatter };
+
 use architecture::{ Opcode, THREADS_COUNT };
 
 use crate::lock::LockId;
@@ -5,13 +7,13 @@ use crate::program::Program;
 use crate::register::RegisterId;
 
 pub struct Threads {
-    threads: [Thread; THREADS_COUNT],
+    threads: Box<[Thread]>,
 }
 
 impl Threads {
     pub fn new() -> Self {
         Self {
-            threads: [(); THREADS_COUNT].map(|_| Thread::new()),
+            threads: (0 .. THREADS_COUNT).map(|i| Thread::new(ThreadId::from_raw(i as u8))).collect(),
         }
     }
 
@@ -23,8 +25,11 @@ impl Threads {
         &mut self.threads[ThreadId::to_raw(id)]
     }
 
-    pub fn iterate(&self) -> impl Iterator<Item = ThreadId> {
-        (0 as u8 .. THREADS_COUNT as u8).map(|i| ThreadId::from_raw(i))
+    pub fn actives(&self) -> Box<[ThreadId]> {
+        self.threads.iter()
+            .filter(|thread| thread.is_active())
+            .map(|thread| thread.id)
+            .collect()
     }
 }
 
@@ -36,15 +41,17 @@ pub enum ThreadStatus {
 }
 
 pub struct Thread {
-    active: ThreadStatus,
+    id: ThreadId,
     cursor: u64,
+    active: ThreadStatus,
 }
 
 impl Thread {
-    pub fn new() -> Self {
+    pub fn new(id: ThreadId) -> Self {
         Self {
-            active: ThreadStatus::Inactive,
+            id,
             cursor: 0,
+            active: ThreadStatus::Inactive,
         }
     }
 
@@ -58,6 +65,14 @@ impl Thread {
         } else {
             false
         }
+    }
+
+    pub fn id(&self) -> ThreadId {
+        self.id
+    }
+
+    pub fn cursor(&self) -> u64 {
+        self.cursor
     }
 
     pub fn jump(&mut self, cursor: u64) {
@@ -138,5 +153,13 @@ impl ThreadId {
 
     pub fn to_raw(id: ThreadId) -> usize {
         id.0 as usize
+    }
+}
+
+impl Display for ThreadId {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("t")?;
+        formatter.write_fmt(format_args!("{}", self.0))?;
+        Ok(())
     }
 }
