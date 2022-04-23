@@ -1,3 +1,7 @@
+const8 r1, 85
+const8 r2, 0
+store8 r1, r2, l0
+wait l0
 const8 r1, 13
 const8 r2, 1
 store8 r1, r2, l0
@@ -122,39 +126,43 @@ const8 r1, 136
 const8 r2, 31
 store8 r1, r2, l0
 wait l0
-const8 r1, 85
-const8 r2, 32
-store8 r1, r2, l0
-wait l0
 sortstart:
 const8 r0, 0
 const8 r1, 1
 const8 r2, 32
-const8 r3, 0
+const8 r3, 32
 const16 r25, sortstart
-const16 r26, sortloop
-const16 r27, sortnext
-const16 r28, sortend
-sortloop:
-add r3, r1, r4, l0
+const16 r26, sortloop1
+const16 r27, sortloop2
+const16 r28, sortnext
+const16 r29, sortend
+sortloop1:
+sub r3, r1, r3, l0
 wait l0
-eq r4, r2, r5, l0
+eq r3, r0, r24, l0
 wait l0
-jumpif r28, r5
-load8 r3, r6, l0
-load8 r4, r7, l1
+jumpif r29, r24
+const8 r4, 0
+sortloop2:
+add r4, r1, r5, l0
+eq r4, r3, r24, l1
 wait l0
 wait l1
-gt r7, r6, r5, l0
+jumpif r26, r24
+load8 r4, r6, l0
+load8 r5, r7, l1
 wait l0
-jumpif r27, r5
-store8 r6, r4, l0
-store8 r7, r3, l1
+wait l1
+gt r7, r6, r24, l0
+wait l0
+jumpif r28, r24
+store8 r6, r5, l0
+store8 r7, r4, l1
 wait l0
 wait l1
 sortnext:
-move r4, r3
-jump r26
+move r5, r4
+jump r27
 sortend:
 printstart:
 const8 r0, 0

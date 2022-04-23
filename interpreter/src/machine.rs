@@ -92,16 +92,16 @@ impl<'a> Machine<'a> {
                 self.constant(thread_id, |machine, thread| machine.next_const64(thread));
             },
             Opcode::Load8 => {
-                self.load(thread_id, |memory, address| memory.get_8(address));
+                self.load(thread_id, |memory, address| memory.get_8(address) as u64);
             },
             Opcode::Load16 => {
-                self.load(thread_id, |memory, address| memory.get_16(address));
+                self.load(thread_id, |memory, address| memory.get_16(address) as u64);
             },
             Opcode::Load32 => {
-                self.load(thread_id, |memory, address| memory.get_32(address));
+                self.load(thread_id, |memory, address| memory.get_32(address) as u64);
             },
             Opcode::Load64 => {
-                self.load(thread_id, |memory, address| memory.get_64(address));
+                self.load(thread_id, |memory, address| memory.get_64(address) as u64);
             },
             Opcode::Store8 => {
                 self.store(thread_id, |memory, address, value| memory.set_8(address, value as u8));
@@ -113,7 +113,7 @@ impl<'a> Machine<'a> {
                 self.store(thread_id, |memory, address, value| memory.set_32(address, value as u32));
             },
             Opcode::Store64 => {
-                self.store(thread_id, |memory, address, value| memory.set_64(address, value));
+                self.store(thread_id, |memory, address, value| memory.set_64(address, value as u64));
             },
             Opcode::And => {
                 self.calcul(thread_id, TIME_AND, |_, _, a, b| a & b);

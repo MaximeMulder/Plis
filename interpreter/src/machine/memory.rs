@@ -1,62 +1,53 @@
-const MEMORY_SIZE: usize = 0x100;
+const MEMORY_SIZE: usize = 0x10000;
 
 pub struct Memory {
-    bytes: [u64; MEMORY_SIZE / 8],
+    bytes: [u8; MEMORY_SIZE],
 }
 
 impl Memory {
     pub fn new() -> Self {
         Self {
-            bytes: [0; MEMORY_SIZE / 8],
+            bytes: [0; MEMORY_SIZE],
         }
     }
 
-    pub fn get_8(&self, address: u64) -> u64 {
-        let index = address as usize / 8;
-        let offset = address as usize % 8;
-        self.bytes[index] >> offset * 8
+    pub fn get_8(&self, address: u64) -> u8 {
+        u8::from_ne_bytes(
+            self.bytes.get(address as usize .. address as usize + 1).unwrap().try_into().unwrap()
+        )
     }
 
-    pub fn get_16(&self, address: u64) -> u64 {
-        let index = address as usize / 4;
-        let offset = address as usize % 4;
-        self.bytes[index] >> offset * 16
+    pub fn get_16(&self, address: u64) -> u16 {
+        u16::from_ne_bytes(
+            self.bytes.get(address as usize .. address as usize + 2).unwrap().try_into().unwrap()
+        )
     }
 
-    pub fn get_32(&self, address: u64) -> u64 {
-        let index = address as usize / 2;
-        let offset = address as usize % 2;
-        self.bytes[index] >> offset * 32
+    pub fn get_32(&self, address: u64) -> u32 {
+        u32::from_ne_bytes(
+            self.bytes.get(address as usize .. address as usize + 4).unwrap().try_into().unwrap()
+        )
     }
 
     pub fn get_64(&self, address: u64) -> u64 {
-        let index = address as usize;
-        self.bytes[index]
+        u64::from_ne_bytes(
+            self.bytes.get(address as usize .. address as usize + 8).unwrap().try_into().unwrap()
+        )
     }
 
     pub fn set_8(&mut self, address: u64, value: u8) {
-        let index = address as usize / 8;
-        let offset = address as usize % 8;
-        self.bytes[index] &= !(0xff << offset * 8);
-        self.bytes[index] |= (value as u64) << offset * 8;
+        self.bytes.get_mut(address as usize .. address as usize + 1).unwrap().copy_from_slice(&value.to_ne_bytes());
     }
 
     pub fn set_16(&mut self, address: u64, value: u16) {
-        let index = address as usize / 4;
-        let offset = address as usize % 4;
-        self.bytes[index] &= !(0xffff << offset * 16);
-        self.bytes[index] |= (value as u64) << offset * 16;
+        self.bytes.get_mut(address as usize .. address as usize + 2).unwrap().copy_from_slice(&value.to_ne_bytes());
     }
 
     pub fn set_32(&mut self, address: u64, value: u32) {
-        let index = address as usize / 2;
-        let offset = address as usize % 2;
-        self.bytes[index] &= !(0xffffffff << offset * 32);
-        self.bytes[index] |= (value as u64) << offset * 32;
+        self.bytes.get_mut(address as usize .. address as usize + 4).unwrap().copy_from_slice(&value.to_ne_bytes());
     }
 
     pub fn set_64(&mut self, address: u64, value: u64) {
-        let index = address as usize;
-        self.bytes[index] = value;
+        self.bytes.get_mut(address as usize .. address as usize + 8).unwrap().copy_from_slice(&value.to_ne_bytes());
     }
 }
