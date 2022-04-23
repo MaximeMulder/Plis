@@ -2,9 +2,9 @@ use std::fmt::{ Display, Formatter };
 
 use architecture::{ Opcode, THREADS_COUNT };
 
-use crate::lock::LockId;
-use crate::program::Program;
-use crate::register::RegisterId;
+use crate::machine::lock::LockId;
+use crate::machine::Machine;
+use crate::machine::register::RegisterId;
 
 pub struct Threads {
     threads: Box<[Thread]>,
@@ -93,52 +93,63 @@ impl Thread {
 }
 
 impl Thread {
-    pub fn next_opcode(&mut self, program: &Program) -> Opcode {
-        let opcode = program.get_8(self.cursor);
-        self.cursor += 1;
-        Opcode::from_raw(opcode).unwrap()
+}
+
+impl Machine<'_> {
+    pub fn next_opcode(&mut self, thread: ThreadId) -> Opcode {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_8(thread.cursor);
+        thread.cursor += 1;
+        Opcode::from_raw(value).unwrap()
     }
 
-    pub fn next_register(&mut self, program: &Program) -> RegisterId {
-        let register = program.get_8(self.cursor);
-        self.cursor += 1;
-        RegisterId::from_raw(register)
+    pub fn next_register(&mut self, thread: ThreadId) -> RegisterId {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_8(thread.cursor);
+        thread.cursor += 1;
+        RegisterId::from_raw(value)
     }
 
-    pub fn next_lock(&mut self, program: &Program) -> LockId {
-        let lock = program.get_8(self.cursor);
-        self.cursor += 1;
-        LockId::from_raw(lock)
+    pub fn next_lock(&mut self, thread: ThreadId) -> LockId {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_8(thread.cursor);
+        thread.cursor += 1;
+        LockId::from_raw(value)
     }
 
-    pub fn next_thread(&mut self, program: &Program) -> ThreadId {
-        let thread = program.get_8(self.cursor);
-        self.cursor += 1;
-        ThreadId::from_raw(thread)
+    pub fn next_thread(&mut self, thread: ThreadId) -> ThreadId {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_8(thread.cursor);
+        thread.cursor += 1;
+        ThreadId::from_raw(value)
     }
 
-    pub fn next_const8(&mut self, program: &Program) -> u64 {
-        let value = program.get_8(self.cursor);
-        self.cursor += 1;
+    pub fn next_const8(&mut self, thread: ThreadId) -> u64 {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_8(thread.cursor);
+        thread.cursor += 1;
         value as u64
     }
 
-    pub fn next_const16(&mut self, program: &Program) -> u64 {
-        let value = program.get_16(self.cursor);
-        self.cursor += 2;
+    pub fn next_const16(&mut self, thread: ThreadId) -> u64 {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_16(thread.cursor);
+        thread.cursor += 2;
         value as u64
     }
 
-    pub fn next_const32(&mut self, program: &Program) -> u64 {
-        let value = program.get_32(self.cursor);
-        self.cursor += 4;
+    pub fn next_const32(&mut self, thread: ThreadId) -> u64 {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_32(thread.cursor);
+        thread.cursor += 4;
         value as u64
     }
 
-    pub fn next_const64(&mut self, program: &Program) -> u64 {
-        let value = program.get_64(self.cursor);
-        self.cursor += 8;
-        value
+    pub fn next_const64(&mut self, thread: ThreadId) -> u64 {
+        let thread = self.threads.get_mut(thread);
+        let value = self.program.get_64(thread.cursor);
+        thread.cursor += 8;
+        value as u64
     }
 }
 

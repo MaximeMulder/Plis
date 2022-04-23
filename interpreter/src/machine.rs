@@ -1,14 +1,20 @@
+mod lock;
+mod memory;
+mod register;
+mod thread;
+
 use std::io::stdin;
 use std::process::exit;
 use std::rc::Rc;
 
 use architecture::Opcode;
 
-use crate::lock::{ Locks, LockId };
-use crate::memory::Memory;
+use lock::{ Locks, LockId };
+use memory::Memory;
+use register::Registers;
+use thread::{ Threads, ThreadId };
+
 use crate::program::Program;
-use crate::register::Registers;
-use crate::thread::{ Threads, Thread, ThreadId };
 use crate::time::*;
 
 pub struct Machine<'a> {
@@ -42,9 +48,9 @@ impl<'a> Machine<'a> {
                 self.error("No active threads.");
             }
 
-            for thread_id in self.threads.actives().into_iter().copied() {
-                let opcode = self.threads.get_mut(thread_id).next_opcode(self.program);
-                self.run_instruction(thread_id, opcode);
+            for thread in self.threads.actives().into_iter().copied() {
+                let opcode = self.next_opcode(thread);
+                self.run_instruction(thread, opcode);
             }
 
             for callback in self.callbacks.clone() {
@@ -65,16 +71,16 @@ impl<'a> Machine<'a> {
         match opcode {
             Opcode::Nop => {},
             Opcode::Const8 => {
-                self.constant(thread_id, |thread, program| thread.next_const8(program));
+                self.constant(thread_id, |machine, thread| machine.next_const8(thread));
             },
             Opcode::Const16 => {
-                self.constant(thread_id, |thread, program| thread.next_const16(program));
+                self.constant(thread_id, |machine, thread| machine.next_const16(thread));
             },
             Opcode::Const32 => {
-                self.constant(thread_id, |thread, program| thread.next_const32(program));
+                self.constant(thread_id, |machine, thread| machine.next_const32(thread));
             },
             Opcode::Const64 => {
-                self.constant(thread_id, |thread, program| thread.next_const64(program));
+                self.constant(thread_id, |machine, thread| machine.next_const64(thread));
             },
             Opcode::Load8 => {
                 self.load(thread_id, |memory, address| memory.get_8(address));
@@ -137,59 +143,50 @@ impl<'a> Machine<'a> {
                 self.calcul(thread_id, TIME_REM, |_, _, a, b| a % b);
             },
             Opcode::Jump => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let address = thread.next_register(self.program);
+                let address = self.next_register(thread_id);
 
                 let address = self.registers.read(address);
 
+                let thread = self.threads.get_mut(thread_id);
                 thread.jump(address);
             },
             Opcode::JumpIf => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let address   = thread.next_register(self.program);
-                let condition = thread.next_register(self.program);
+                let address   = self.next_register(thread_id);
+                let condition = self.next_register(thread_id);
 
                 let address   = self.registers.read(address);
                 let condition = self.registers.read(condition);
 
                 if condition != 0 {
+                    let thread = self.threads.get_mut(thread_id);
                     thread.jump(address);
                 }
             },
             Opcode::Wait => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let lock_id = thread.next_lock(self.program);
+                let lock_id = self.next_lock(thread_id);
 
                 if self.locks.get(lock_id).locked() {
+                    let thread = self.threads.get_mut(thread_id);
                     thread.wait(lock_id);
                 }
             },
             Opcode::Lock => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let lock_id = thread.next_lock(self.program);
+                let lock_id = self.next_lock(thread_id);
 
                 self.callback(move |machine| {
                     machine.locks.get_mut(lock_id).lock();
                 });
             },
             Opcode::Unlock => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let lock_id = thread.next_lock(self.program);
+                let lock_id = self.next_lock(thread_id);
 
                 self.callback(move |machine| {
                     machine.unlock(lock_id);
                 });
             },
             Opcode::Start => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let other   = thread.next_thread(self.program);
-                let address = thread.next_register(self.program);
+                let other   = self.next_thread(thread_id);
+                let address = self.next_register(thread_id);
 
                 let address = self.registers.read(address);
 
@@ -200,9 +197,7 @@ impl<'a> Machine<'a> {
                 });
             },
             Opcode::Stop => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let other = thread.next_thread(self.program);
+                let other   = self.next_thread(thread_id);
 
                 self.callback(move |machine| {
                     let other = machine.threads.get_mut(other);
@@ -215,9 +210,7 @@ impl<'a> Machine<'a> {
                 thread.stop();
             },
             Opcode::Scan => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let result = thread.next_register(self.program);
+                let result = self.next_register(thread_id);
 
                 let mut input = String::new();
                 stdin().read_line(&mut input).unwrap_or_else(|_| self.error_thread(thread_id, "Cannot read input."));
@@ -225,9 +218,7 @@ impl<'a> Machine<'a> {
                 self.registers.write(result, integer);
             },
             Opcode::Print => {
-                let thread = self.threads.get_mut(thread_id);
-
-                let value = thread.next_register(self.program);
+                let value = self.next_register(thread_id);
 
                 let value = self.registers.read(value);
 
@@ -252,22 +243,18 @@ impl<'a> Machine<'a> {
 }
 
 impl Machine<'_> {
-    fn constant(&mut self, thread_id: ThreadId, closure: impl Fn(&mut Thread, &Program) -> u64) {
-        let thread = self.threads.get_mut(thread_id);
+    fn constant(&mut self, thread: ThreadId, closure: impl Fn(&mut Machine, ThreadId) -> u64) {
+        let register = self.next_register(thread);
 
-        let register = thread.next_register(self.program);
-
-        let constant = closure(thread, self.program);
+        let constant = closure(self, thread);
 
         self.registers.write(register, constant);
     }
 
     fn load(&mut self, thread_id: ThreadId, closure: fn(&Memory, u64) -> u64) {
-        let thread = self.threads.get_mut(thread_id);
-
-        let address     = thread.next_register(self.program);
-        let destination = thread.next_register(self.program);
-        let lock_id     = thread.next_lock(self.program);
+        let address     = self.next_register(thread_id);
+        let destination = self.next_register(thread_id);
+        let lock_id     = self.next_lock(thread_id);
 
         let address = self.registers.read(address);
         self.locks.get_mut(lock_id).lock();
@@ -280,11 +267,9 @@ impl Machine<'_> {
     }
 
     fn store(&mut self, thread_id: ThreadId, closure: fn(&mut Memory, u64, u64)) {
-        let thread = self.threads.get_mut(thread_id);
-
-        let source      = thread.next_register(self.program);
-        let destination = thread.next_register(self.program);
-        let lock_id     = thread.next_lock(self.program);
+        let source      = self.next_register(thread_id);
+        let destination = self.next_register(thread_id);
+        let lock_id     = self.next_lock(thread_id);
 
         let address = self.registers.read(destination);
         let value   = self.registers.read(source);
@@ -297,12 +282,10 @@ impl Machine<'_> {
     }
 
     fn calcul(&mut self, thread_id: ThreadId, delay: usize, closure: fn(&Machine, ThreadId, u64, u64) -> u64) {
-        let thread = self.threads.get_mut(thread_id);
-
-        let a       = thread.next_register(self.program);
-        let b       = thread.next_register(self.program);
-        let result  = thread.next_register(self.program);
-        let lock_id = thread.next_lock(self.program);
+        let a       = self.next_register(thread_id);
+        let b       = self.next_register(thread_id);
+        let result  = self.next_register(thread_id);
+        let lock_id = self.next_lock(thread_id);
 
         let a = self.registers.read(a);
         let b = self.registers.read(b);

@@ -1,12 +1,8 @@
 #![feature(let_else)]
 
-mod lock;
 mod machine;
-mod memory;
 mod program;
-mod thread;
 mod time;
-mod register;
 
 use std::env::args;
 use std::path::Path;
