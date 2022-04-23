@@ -1,0 +1,178 @@
+const8 r1, 13
+const8 r2, 1
+store8 r1, r2, l0
+wait l0
+const8 r1, 244
+const8 r2, 2
+store8 r1, r2, l0
+wait l0
+const8 r1, 60
+const8 r2, 3
+store8 r1, r2, l0
+wait l0
+const8 r1, 15
+const8 r2, 4
+store8 r1, r2, l0
+wait l0
+const8 r1, 36
+const8 r2, 5
+store8 r1, r2, l0
+wait l0
+const8 r1, 43
+const8 r2, 6
+store8 r1, r2, l0
+wait l0
+const8 r1, 222
+const8 r2, 7
+store8 r1, r2, l0
+wait l0
+const8 r1, 184
+const8 r2, 8
+store8 r1, r2, l0
+wait l0
+const8 r1, 7
+const8 r2, 9
+store8 r1, r2, l0
+wait l0
+const8 r1, 8
+const8 r2, 10
+store8 r1, r2, l0
+wait l0
+const8 r1, 9
+const8 r2, 11
+store8 r1, r2, l0
+wait l0
+const8 r1, 83
+const8 r2, 12
+store8 r1, r2, l0
+wait l0
+const8 r1, 125
+const8 r2, 13
+store8 r1, r2, l0
+wait l0
+const8 r1, 145
+const8 r2, 14
+store8 r1, r2, l0
+wait l0
+const8 r1, 35
+const8 r2, 15
+store8 r1, r2, l0
+wait l0
+const8 r1, 99
+const8 r2, 16
+store8 r1, r2, l0
+wait l0
+const8 r1, 63
+const8 r2, 17
+store8 r1, r2, l0
+wait l0
+const8 r1, 124
+const8 r2, 18
+store8 r1, r2, l0
+wait l0
+const8 r1, 2
+const8 r2, 19
+store8 r1, r2, l0
+wait l0
+const8 r1, 11
+const8 r2, 20
+store8 r1, r2, l0
+wait l0
+const8 r1, 12
+const8 r2, 21
+store8 r1, r2, l0
+wait l0
+const8 r1, 79
+const8 r2, 22
+store8 r1, r2, l0
+wait l0
+const8 r1, 78
+const8 r2, 23
+store8 r1, r2, l0
+wait l0
+const8 r1, 254
+const8 r2, 24
+store8 r1, r2, l0
+wait l0
+const8 r1, 24
+const8 r2, 25
+store8 r1, r2, l0
+wait l0
+const8 r1, 58
+const8 r2, 26
+store8 r1, r2, l0
+wait l0
+const8 r1, 53
+const8 r2, 27
+store8 r1, r2, l0
+wait l0
+const8 r1, 42
+const8 r2, 28
+store8 r1, r2, l0
+wait l0
+const8 r1, 69
+const8 r2, 29
+store8 r1, r2, l0
+wait l0
+const8 r1, 56
+const8 r2, 30
+store8 r1, r2, l0
+wait l0
+const8 r1, 136
+const8 r2, 31
+store8 r1, r2, l0
+wait l0
+const8 r1, 85
+const8 r2, 32
+store8 r1, r2, l0
+wait l0
+sortstart:
+const8 r0, 0
+const8 r1, 1
+const8 r2, 32
+const8 r3, 0
+const16 r25, sortstart
+const16 r26, sortloop
+const16 r27, sortnext
+const16 r28, sortend
+sortloop:
+add r3, r1, r4, l0
+wait l0
+eq r4, r2, r5, l0
+wait l0
+jumpif r28, r5
+load8 r3, r6, l0
+load8 r4, r7, l1
+wait l0
+wait l1
+gt r7, r6, r5, l0
+wait l0
+jumpif r27, r5
+store8 r6, r4, l0
+store8 r7, r3, l1
+wait l0
+wait l1
+sortnext:
+move r4, r3
+jump r26
+sortend:
+printstart:
+const8 r0, 0
+const8 r1, 1
+const8 r2, 32
+const8 r3, 0
+const16 r25, printloop
+const16 r26, printloop
+const16 r27, printend
+printloop:
+eq r3, r2, r4, l0
+wait l0
+jumpif r27, r4
+load8 r3, r4, l0
+wait l0
+print r4
+add r3, r1, r3, l0
+wait l0
+jump r26
+printend:
+exit

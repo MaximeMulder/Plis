@@ -333,6 +333,30 @@ Description:
 - Performs an integer remainder of `a` by `b` and stores the result in the `result`.
 - This operation is asynchronous and unlocks `lock` once completed.
 
+#### Integer eq
+
+Opcode: `0xF0`
+
+Format: `eq <r:a> <r:b> <r:result> <l:lock>`
+
+Size: 5
+
+Description:
+- Checks if `a` and `b` are equal and stores the result in the `result`.
+- This operation is asynchronous and unlocks `lock` once completed.
+
+#### Integer gt
+
+Opcode: `0xF1`
+
+Format: `gt <r:a> <r:b> <r:result> <l:lock>`
+
+Size: 5
+
+Description:
+- Checks if `a` is greater than `b` and stores the result in the `result`.
+- This operation is asynchronous and unlocks `lock` once completed.
+
 ### Jumps
 
 #### Jump
@@ -420,7 +444,7 @@ Description:
 
 Opcode: `0x1F`
 
-Format: `End`
+Format: `end`
 
 Size: 1
 

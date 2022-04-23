@@ -149,7 +149,19 @@ impl<'a> Machine<'a> {
                 });
             },
             Opcode::Rem => {
-                self.calcul(thread_id, TIME_REM, |_, _, a, b| a % b);
+                self.calcul(thread_id, TIME_REM, |machine, thread_id, a, b| {
+                    if b == 0 {
+                        machine.error_division_by_zero(thread_id);
+                    }
+
+                    a % b
+                });
+            },
+            Opcode::Eq => {
+                self.calcul(thread_id, TIME_EQ, |_, _, a, b| if a == b { 0 } else { 1 });
+            },
+            Opcode::Gt => {
+                self.calcul(thread_id, TIME_GT, |_, _, a, b| if a > b { 0 } else { 1 });
             },
             Opcode::Jump => {
                 let address = self.next_register(thread_id);
@@ -166,7 +178,7 @@ impl<'a> Machine<'a> {
                 let address   = self.register_read(address);
                 let condition = self.register_read(condition);
 
-                if condition != 0 {
+                if condition == 0 {
                     let thread = self.threads.get_mut(thread_id);
                     thread.jump(address);
                 }
