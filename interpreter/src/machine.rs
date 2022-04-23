@@ -1,3 +1,4 @@
+mod error;
 mod lock;
 mod memory;
 mod register;
@@ -9,7 +10,7 @@ use std::rc::Rc;
 
 use architecture::Opcode;
 
-use lock::{ Locks, LockId };
+use lock::Locks;
 use memory::Memory;
 use register::Registers;
 use thread::{ Threads, ThreadId };
@@ -41,14 +42,14 @@ impl<'a> Machine<'a> {
     }
 
     pub fn run(&mut self) {
-        self.threads.get_mut(ThreadId::from_raw(0)).start();
+        self.threads.get_mut(ThreadId::from_raw(0).unwrap()).start();
         loop {
-            let threads_ids = self.threads.actives();
-            if threads_ids.is_empty() && self.callbacks.is_empty() {
-                self.error("No active threads.");
+            let actives = self.threads.get_actives();
+            if actives.is_empty() && self.callbacks.is_empty() {
+                self.error_pause();
             }
 
-            for thread in self.threads.actives().into_iter().copied() {
+            for thread in self.threads.get_actives().into_iter().copied() {
                 let opcode = self.next_opcode(thread);
                 self.run_instruction(thread, opcode);
             }
@@ -63,6 +64,7 @@ impl<'a> Machine<'a> {
 
             self.callbacks.retain(|callback| callback.0 != self.counter);
 
+            self.registers.reset();
             self.counter += 1;
         }
     }
@@ -70,6 +72,13 @@ impl<'a> Machine<'a> {
     pub fn run_instruction(&mut self, thread_id: ThreadId, opcode: Opcode) {
         match opcode {
             Opcode::Nop => {},
+            Opcode::Move => {
+                let source      = self.next_register(thread_id);
+                let destination = self.next_register(thread_id);
+
+                let value = self.register_read(source);
+                self.register_write(destination, value);
+            },
             Opcode::Const8 => {
                 self.constant(thread_id, |machine, thread| machine.next_const8(thread));
             },
@@ -133,7 +142,7 @@ impl<'a> Machine<'a> {
             Opcode::Div => {
                 self.calcul(thread_id, TIME_DIV, |machine, thread_id, a, b| {
                     if b == 0 {
-                        machine.error_thread(thread_id, "Division by zero.")
+                        machine.error_division_by_zero(thread_id);
                     }
 
                     a / b
@@ -145,7 +154,7 @@ impl<'a> Machine<'a> {
             Opcode::Jump => {
                 let address = self.next_register(thread_id);
 
-                let address = self.registers.read(address);
+                let address = self.register_read(address);
 
                 let thread = self.threads.get_mut(thread_id);
                 thread.jump(address);
@@ -154,8 +163,8 @@ impl<'a> Machine<'a> {
                 let address   = self.next_register(thread_id);
                 let condition = self.next_register(thread_id);
 
-                let address   = self.registers.read(address);
-                let condition = self.registers.read(condition);
+                let address   = self.register_read(address);
+                let condition = self.register_read(condition);
 
                 if condition != 0 {
                     let thread = self.threads.get_mut(thread_id);
@@ -165,7 +174,7 @@ impl<'a> Machine<'a> {
             Opcode::Wait => {
                 let lock_id = self.next_lock(thread_id);
 
-                if self.locks.get(lock_id).locked() {
+                if self.locked(lock_id) {
                     let thread = self.threads.get_mut(thread_id);
                     thread.wait(lock_id);
                 }
@@ -174,7 +183,7 @@ impl<'a> Machine<'a> {
                 let lock_id = self.next_lock(thread_id);
 
                 self.callback(move |machine| {
-                    machine.locks.get_mut(lock_id).lock();
+                    machine.lock(lock_id);
                 });
             },
             Opcode::Unlock => {
@@ -188,7 +197,7 @@ impl<'a> Machine<'a> {
                 let other   = self.next_thread(thread_id);
                 let address = self.next_register(thread_id);
 
-                let address = self.registers.read(address);
+                let address = self.register_read(address);
 
                 self.callback(move |machine| {
                     let other = machine.threads.get_mut(other);
@@ -213,14 +222,14 @@ impl<'a> Machine<'a> {
                 let result = self.next_register(thread_id);
 
                 let mut input = String::new();
-                stdin().read_line(&mut input).unwrap_or_else(|_| self.error_thread(thread_id, "Cannot read input."));
-                let integer = input.trim().parse::<u64>().unwrap_or_else(|_| self.error_thread(thread_id, "Cannot parse input."));
-                self.registers.write(result, integer);
+                stdin().read_line(&mut input).unwrap_or_else(|_| self.error_input_read(thread_id));
+                let integer = input.trim().parse::<u64>().unwrap_or_else(|_| self.error_input_parse(thread_id));
+                self.register_write(result, integer);
             },
             Opcode::Print => {
                 let value = self.next_register(thread_id);
 
-                let value = self.registers.read(value);
+                let value = self.register_read(value);
 
                 println!("{}", value);
             },
@@ -228,17 +237,6 @@ impl<'a> Machine<'a> {
                 exit(0);
             },
         }
-    }
-
-    fn error(&self, message: &str) -> ! {
-        println!("ERROR: {}", message);
-        exit(0);
-    }
-
-    fn error_thread(&self, thread_id: ThreadId, message: &str) -> !{
-        let thread = self.threads.get(thread_id);
-        eprintln!("ERROR THREAD {} ADRESS {:#X}: {}", thread.id(), thread.cursor(), message);
-        exit(0);
     }
 }
 
@@ -248,7 +246,7 @@ impl Machine<'_> {
 
         let constant = closure(self, thread);
 
-        self.registers.write(register, constant);
+        self.register_write(register, constant);
     }
 
     fn load(&mut self, thread_id: ThreadId, closure: fn(&Memory, u64) -> u64) {
@@ -256,12 +254,12 @@ impl Machine<'_> {
         let destination = self.next_register(thread_id);
         let lock_id     = self.next_lock(thread_id);
 
-        let address = self.registers.read(address);
-        self.locks.get_mut(lock_id).lock();
+        let address = self.register_read(address);
+        self.lock(lock_id);
 
         self.callback_delay(TIME_LOAD, move |machine| {
             let value = closure(&machine.memory, address);
-            machine.registers.write(destination, value);
+            machine.register_write(destination, value);
             machine.unlock(lock_id);
         });
     }
@@ -271,9 +269,9 @@ impl Machine<'_> {
         let destination = self.next_register(thread_id);
         let lock_id     = self.next_lock(thread_id);
 
-        let address = self.registers.read(destination);
-        let value   = self.registers.read(source);
-        self.locks.get_mut(lock_id).lock();
+        let address = self.register_read(destination);
+        let value   = self.register_read(source);
+        self.lock(lock_id);
 
         self.callback_delay(TIME_STORE, move |machine| {
             closure(&mut machine.memory, address, value);
@@ -287,13 +285,13 @@ impl Machine<'_> {
         let result  = self.next_register(thread_id);
         let lock_id = self.next_lock(thread_id);
 
-        let a = self.registers.read(a);
-        let b = self.registers.read(b);
-        self.locks.get_mut(lock_id).lock();
+        let a = self.register_read(a);
+        let b = self.register_read(b);
+        self.lock(lock_id);
 
         self.callback_delay(delay, move |machine| {
             let value = closure(machine, thread_id, a, b);
-            machine.registers.write(result, value);
+            machine.register_write(result, value);
             machine.unlock(lock_id);
         });
     }
@@ -306,15 +304,5 @@ impl Machine<'_> {
 
     fn callback_delay(&mut self, delay: usize, callback: impl Fn(&mut Machine) + 'static) {
         self.callbacks.push((self.counter + delay, Rc::new(callback)));
-    }
-
-    fn unlock(&mut self, lock_id: LockId) {
-        self.locks.get_mut(lock_id).unlock();
-        for thread in self.threads.actives().into_iter().copied() {
-            let thread = self.threads.get_mut(thread);
-            if thread.is_waiting(lock_id) {
-                thread.start();
-            }
-        }
     }
 }

@@ -13,7 +13,7 @@ pub struct Threads {
 impl Threads {
     pub fn new() -> Self {
         Self {
-            threads: (0 .. THREADS_COUNT).map(|i| Thread::new(ThreadId::from_raw(i as u8))).collect(),
+            threads: (0 .. THREADS_COUNT).map(|i| Thread::new(ThreadId::from_raw(i as u8).unwrap())).collect(),
         }
     }
 
@@ -25,7 +25,13 @@ impl Threads {
         &mut self.threads[ThreadId::to_raw(id)]
     }
 
-    pub fn actives(&self) -> Box<[ThreadId]> {
+    pub fn get_threads(&self) -> Box<[ThreadId]> {
+        self.threads.iter()
+            .map(|thread| thread.id)
+            .collect()
+    }
+
+    pub fn get_actives(&self) -> Box<[ThreadId]> {
         self.threads.iter()
             .filter(|thread| thread.is_active())
             .map(|thread| thread.id)
@@ -92,74 +98,12 @@ impl Thread {
     }
 }
 
-impl Thread {
-}
-
-impl Machine<'_> {
-    pub fn next_opcode(&mut self, thread: ThreadId) -> Opcode {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_8(thread.cursor);
-        thread.cursor += 1;
-        Opcode::from_raw(value).unwrap()
-    }
-
-    pub fn next_register(&mut self, thread: ThreadId) -> RegisterId {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_8(thread.cursor);
-        thread.cursor += 1;
-        RegisterId::from_raw(value)
-    }
-
-    pub fn next_lock(&mut self, thread: ThreadId) -> LockId {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_8(thread.cursor);
-        thread.cursor += 1;
-        LockId::from_raw(value)
-    }
-
-    pub fn next_thread(&mut self, thread: ThreadId) -> ThreadId {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_8(thread.cursor);
-        thread.cursor += 1;
-        ThreadId::from_raw(value)
-    }
-
-    pub fn next_const8(&mut self, thread: ThreadId) -> u64 {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_8(thread.cursor);
-        thread.cursor += 1;
-        value as u64
-    }
-
-    pub fn next_const16(&mut self, thread: ThreadId) -> u64 {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_16(thread.cursor);
-        thread.cursor += 2;
-        value as u64
-    }
-
-    pub fn next_const32(&mut self, thread: ThreadId) -> u64 {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_32(thread.cursor);
-        thread.cursor += 4;
-        value as u64
-    }
-
-    pub fn next_const64(&mut self, thread: ThreadId) -> u64 {
-        let thread = self.threads.get_mut(thread);
-        let value = self.program.get_64(thread.cursor);
-        thread.cursor += 8;
-        value as u64
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct ThreadId(u8);
 
 impl ThreadId {
-    pub fn from_raw(raw: u8) -> Self {
-        assert!((raw as usize) < THREADS_COUNT);
-        Self(raw)
+    pub fn from_raw(raw: u8) -> Option<Self> {
+        ((raw as usize) < THREADS_COUNT).then(|| Self(raw))
     }
 
     pub fn to_raw(id: ThreadId) -> usize {
@@ -172,5 +116,73 @@ impl Display for ThreadId {
         formatter.write_str("t")?;
         formatter.write_fmt(format_args!("{}", self.0))?;
         Ok(())
+    }
+}
+
+impl Machine<'_> {
+    pub fn get_8(&mut self, thread_id: ThreadId) -> u8 {
+        let cursor = self.threads.get(thread_id).cursor;
+        let value = self.program.get_8(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        self.threads.get_mut(thread_id).cursor += 1;
+        value
+    }
+
+    pub fn get_16(&mut self, thread_id: ThreadId) -> u16 {
+        let cursor = self.threads.get(thread_id).cursor;
+        let value = self.program.get_16(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        self.threads.get_mut(thread_id).cursor += 2;
+        value
+    }
+
+    pub fn get_32(&mut self, thread_id: ThreadId) -> u32 {
+        let cursor = self.threads.get(thread_id).cursor;
+        let value = self.program.get_32(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        self.threads.get_mut(thread_id).cursor += 4;
+        value
+    }
+
+    pub fn get_64(&mut self, thread_id: ThreadId) -> u64 {
+        let cursor = self.threads.get(thread_id).cursor;
+        let value = self.program.get_64(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        self.threads.get_mut(thread_id).cursor += 8;
+        value
+    }
+}
+
+impl Machine<'_> {
+    pub fn next_opcode(&mut self, thread_id: ThreadId) -> Opcode {
+        let value = self.get_8(thread_id);
+        Opcode::from_raw(value).unwrap_or_else(|| self.error_invalid_opcode(thread_id, value))
+    }
+
+    pub fn next_register(&mut self, thread_id: ThreadId) -> RegisterId {
+        let value = self.get_8(thread_id);
+        RegisterId::from_raw(value).unwrap_or_else(|| self.error_invalid_register(thread_id, value))
+    }
+
+    pub fn next_lock(&mut self, thread_id: ThreadId) -> LockId {
+        let value = self.get_8(thread_id);
+        LockId::from_raw(value).unwrap_or_else(|| self.error_invalid_lock(thread_id, value))
+    }
+
+    pub fn next_thread(&mut self, thread_id: ThreadId) -> ThreadId {
+        let value = self.get_8(thread_id);
+        ThreadId::from_raw(value).unwrap_or_else(|| self.error_invalid_thread(thread_id, value))
+    }
+
+    pub fn next_const8(&mut self, thread_id: ThreadId) -> u64 {
+        self.get_8(thread_id) as u64
+    }
+
+    pub fn next_const16(&mut self, thread_id: ThreadId) -> u64 {
+        self.get_16(thread_id) as u64
+    }
+
+    pub fn next_const32(&mut self, thread_id: ThreadId) -> u64 {
+        self.get_32(thread_id) as u64
+    }
+
+    pub fn next_const64(&mut self, thread_id: ThreadId) -> u64 {
+        self.get_64(thread_id) as u64
     }
 }

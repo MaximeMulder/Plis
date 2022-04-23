@@ -31,7 +31,7 @@ fn get_input_path(argument: &str) -> &Path {
         panic!();
     };
 
-    if extension != "epism" {
+    if extension != "plis" {
         panic!();
     }
 
@@ -44,7 +44,7 @@ fn get_output_path(argument: &str) -> &Path {
         panic!();
     };
 
-    if extension != "epismo" {
+    if extension != "pliso" {
         panic!();
     }
 

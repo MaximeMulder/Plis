@@ -1,5 +1,7 @@
 use architecture::LOCKS_COUNT;
 
+use crate::machine::Machine;
+
 pub struct Locks {
     locks: [Lock; LOCKS_COUNT],
 }
@@ -30,30 +32,37 @@ impl Lock {
             locked: true,
         }
     }
-
-    pub fn locked(&self) -> bool {
-        self.locked
-    }
-
-    pub fn lock(&mut self) {
-        self.locked = true;
-    }
-
-    pub fn unlock(&mut self) {
-        self.locked = false;
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct LockId(u8);
 
 impl LockId {
-    pub fn from_raw(raw: u8) -> Self {
-        assert!((raw as usize) < LOCKS_COUNT);
-        Self(raw)
+    pub fn from_raw(raw: u8) -> Option<Self> {
+        ((raw as usize) < LOCKS_COUNT).then(|| Self(raw))
     }
 
     pub fn to_raw(id: LockId) -> usize {
         id.0 as usize
+    }
+}
+
+impl Machine<'_> {
+    pub fn locked(&self, lock_id: LockId) -> bool {
+        self.locks.get(lock_id).locked
+    }
+
+    pub fn lock(&mut self, lock_id: LockId) {
+        self.locks.get_mut(lock_id).locked = true;
+    }
+
+    pub fn unlock(&mut self, lock_id: LockId) {
+        self.locks.get_mut(lock_id).locked = false;
+        for thread in self.threads.get_threads().into_iter().copied() {
+            let thread = self.threads.get_mut(thread);
+            if thread.is_waiting(lock_id) {
+                thread.start();
+            }
+        }
     }
 }

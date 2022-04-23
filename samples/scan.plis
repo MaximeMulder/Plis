@@ -1,4 +1,4 @@
 nop nop nop nop nop nop nop nop nop nop
 scan r0
 print r0
-end
+exit

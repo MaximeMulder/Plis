@@ -1,9 +1,12 @@
+#![allow(dead_code)]
+#![feature(bool_to_option)]
 #![feature(let_else)]
 
 mod machine;
 mod program;
 mod time;
 
+use std::fs::read;
 use std::env::args;
 use std::path::Path;
 
@@ -17,7 +20,7 @@ fn main() {
     }
 
     let input = get_input_path(&arguments[1]);
-    let program = Program::new(std::fs::read(input).unwrap().into_boxed_slice());
+    let program = Program::new(read(input).unwrap().into_boxed_slice());
     let mut machine = Machine::new(&program);
     machine.run();
 }
@@ -28,7 +31,7 @@ fn get_input_path(argument: &str) -> &Path {
         panic!();
     };
 
-    if extension != "epismo" {
+    if extension != "pliso" {
         panic!();
     }
 

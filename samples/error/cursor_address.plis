@@ -1,0 +1,3 @@
+const8 r0, 255
+jump r0
+end

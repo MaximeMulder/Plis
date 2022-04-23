@@ -1,12 +1,16 @@
 # Architecture
 
+## Endianness
+
+Plis uses a big-endianness for its bytecode.
+
 ## Components
 
 ### Register
 
 Registers are used to store 64-bit values to make them addressable in program instructions. Writing a value shorter than 64 bits in in a register resets the remaining bits to 0.
 
-There are 256 registers in Epism.
+There are 256 registers in Plis.
 
 A `r` marks a register operand, which is 8-bit long.
 The register `r0` is always equal to `0`.
@@ -15,16 +19,16 @@ The register `r0` is always equal to `0`.
 
 A lock is a special register used to control the parallelism of a program. It does not contain a value but has a state, which is either locked or unlocked.
 
-There are 64 locks in Epism.
+There are 64 locks in Plis.
 
 A `l` marks a lock operand, which is 8-bit long.
 Running an asynchronous operation with the lock `l0` makes it synchronous.
 
 ### Thread
 
-An instruction thread is the Epism equivalent of a software thread, or execution unit. Conceptually, all threads run in parallel, although they share all registers, locks, calculators and memory.
+An instruction thread is the Plis equivalent of a software thread, or execution unit. Conceptually, all threads run in parallel, although they share all registers, locks, calculators and memory.
 
-There are 16 threads in Epism.
+There are 16 threads in Plis.
 
 A `t` marks an thread operand, which is 8-bit long.
 The thread `t0` is the only thread active at the beginning of a program.
@@ -50,11 +54,24 @@ Size: 1
 Description:
 - Has no effect.
 
+### Move
+
+#### Move
+
+Opcode: `0x01`
+
+Format: `move <r:source> <r:destination>`
+
+Size: 3
+
+Description:
+- Copies the value in the register `source` into the register `destination`.
+
 ### Constants
 
 #### Const8
 
-Opcode: `0x01`
+Opcode: `0x02`
 
 Format: `const8 <r:destination> <c8:constant>`
 
@@ -65,7 +82,7 @@ Description:
 
 #### Const16
 
-Opcode: `0x02`
+Opcode: `0x03`
 
 Format: `const16 <r:destination> <c16:constant>`
 
@@ -76,7 +93,7 @@ Description:
 
 #### Const32
 
-Opcode: `0x03`
+Opcode: `0x04`
 
 Format: `const32 <r:destination> <c32:constant>`
 
@@ -87,7 +104,7 @@ Description:
 
 #### Const64
 
-Opcode: `0x04`
+Opcode: `0x05`
 
 Format: `const64 <r:destination> <c64:constant>`
 
@@ -100,7 +117,7 @@ Description:
 
 #### Load8
 
-Opcode: `0x05`
+Opcode: `0x06`
 
 Format: `load8 <r:source> <r:destination> <l:lock>`
 
@@ -112,7 +129,7 @@ Description:
 
 #### Load16
 
-Opcode: `0x06`
+Opcode: `0x07`
 
 Format: `load16 <r:source> <r:destination> <l:lock>`
 
@@ -124,7 +141,7 @@ Description:
 
 #### Load32
 
-Opcode: `0x07`
+Opcode: `0x08`
 
 Format: `load32 <r:source> <r:destination> <l:lock>`
 
@@ -136,7 +153,7 @@ Description:
 
 #### Load64
 
-Opcode: `0x08`
+Opcode: `0x09`
 
 Format: `load64 <r:source> <r:destination> <l:lock>`
 
@@ -148,7 +165,7 @@ Description:
 
 #### Store8
 
-Opcode: `0x09`
+Opcode: `0x0A`
 
 Format: `store8 <r:source> <r:destination> <l:lock>`
 
@@ -160,7 +177,7 @@ Description:
 
 #### Store16
 
-Opcode: `0x0A`
+Opcode: `0x0B`
 
 Format: `store16 <r:source> <r:destination> <l:lock>`
 
@@ -172,7 +189,7 @@ Description:
 
 #### Store32
 
-Opcode: `0x0B`
+Opcode: `0x0C`
 
 Format: `store32 <r:source> <r:destination> <l:lock>`
 
@@ -184,7 +201,7 @@ Description:
 
 #### Store64
 
-Opcode: `0x0C`
+Opcode: `0x0D`
 
 Format: `store64 <r:source> <r:destination> <l:lock>`
 
@@ -198,7 +215,7 @@ Description:
 
 #### Bitwise AND
 
-Opcode: `0x0D`
+Opcode: `0x0E`
 
 Format: `and <r:a> <r:b> <r:result> <l:lock>`
 
@@ -210,7 +227,7 @@ Description:
 
 #### Bitwise OR
 
-Opcode: `0x0E`
+Opcode: `0x0F`
 
 Format: `or <r:a> <r:b> <r:result> <l:lock>`
 
@@ -222,7 +239,7 @@ Description:
 
 #### Bitwise XOR
 
-Opcode: `0x0F`
+Opcode: `0x10`
 
 Format: `xor <r:a> <r:b> <r:result> <l:lock>`
 
@@ -234,7 +251,7 @@ Description:
 
 #### Logical shift left
 
-Opcode: `0x10`
+Opcode: `0x11`
 
 Format: `sll <r:a> <r:b> <r:result> <l:lock>`
 
@@ -246,7 +263,7 @@ Description:
 
 #### Logical shift right
 
-Opcode: `0x11`
+Opcode: `0x12`
 
 Format: `srl <r:a> <r:b> <r:result> <l:lock>`
 
@@ -258,7 +275,7 @@ Description:
 
 #### Integer add
 
-Opcode: `0x12`
+Opcode: `0x13`
 
 Format: `add <r:a> <r:b> <r:result> <l:lock>`
 
@@ -270,7 +287,7 @@ Description:
 
 #### Integer sub
 
-Opcode: `0x13`
+Opcode: `0x14`
 
 Format: `sub <r:a> <r:b> <r:result> <l:lock>`
 
@@ -282,7 +299,7 @@ Description:
 
 #### Integer mul
 
-Opcode: `0x14`
+Opcode: `0x15`
 
 Format: `mul <r:a> <r:b> <r:result> <l:lock>`
 
@@ -294,7 +311,7 @@ Description:
 
 #### Integer div
 
-Opcode: `0x15`
+Opcode: `0x16`
 
 Format: `div <r:a> <r:b> <r:result> <l:lock>`
 
@@ -306,7 +323,7 @@ Description:
 
 #### Integer rem
 
-Opcode: `0x16`
+Opcode: `0x17`
 
 Format: `div <r:a> <r:b> <r:result> <l:lock>`
 
@@ -320,7 +337,7 @@ Description:
 
 #### Jump
 
-Opcode: `0x17`
+Opcode: `0x18`
 
 Format: `jump <r:address>`
 
@@ -331,7 +348,7 @@ Description:
 
 #### Jump if
 
-Opcode: `0x18`
+Opcode: `0x19`
 
 Format: `jumpif <r:address> <r:condition>`
 
@@ -344,7 +361,7 @@ Description:
 
 #### Wait
 
-Opcode: `0x19`
+Opcode: `0x1A`
 
 Format: `wait <l:lock>`
 
@@ -355,7 +372,7 @@ Description:
 
 #### Lock
 
-Opcode: `0x1A`
+Opcode: `0x1B`
 
 Format: `lock <l:lock>`
 
@@ -366,7 +383,7 @@ Description:
 
 #### Unlock
 
-Opcode: `0x1B`
+Opcode: `0x1C`
 
 Format: `unlock <l:lock>`
 
@@ -379,7 +396,7 @@ Description:
 
 #### Start
 
-Opcode: `0x1C`
+Opcode: `0x1D`
 
 Format: `start <t:thread> <r:address>`
 
@@ -390,7 +407,7 @@ Description:
 
 ### Stop
 
-Opcode: `0x1D`
+Opcode: `0x1E`
 
 Format: `stop <t:thread>`
 
@@ -401,7 +418,7 @@ Description:
 
 #### End
 
-Opcode: `0x1E`
+Opcode: `0x1F`
 
 Format: `End`
 
@@ -414,7 +431,7 @@ Description:
 
 #### Scan
 
-Opcode: `0x1F`
+Opcode: `0x20`
 
 Format: `scan <r:register>`
 
@@ -425,7 +442,7 @@ Description:
 
 #### Print
 
-Opcode: `0x20`
+Opcode: `0x21`
 
 Format: `print <r:register>`
 
@@ -436,7 +453,7 @@ Description:
 
 #### Exit
 
-Opcode: `0x21`
+Opcode: `0x22`
 
 Format: `exit`
 
@@ -447,8 +464,18 @@ Description:
 
 ## Errors
 
-- Deadlock: No thread can proceed in the program.
-- Cursor out of bounds: Tried to read the program out of its bounds.
-- Division by zero: Tried to divide by zero.
-- Input read: Failed to read the user input.
-- Input parse: Failed to parse the user input into an integer.
+Program errors:
+- Invalid opcode: An opcode byte is invalid.
+- Invalid register: A register byte is invalid.
+- Invalid lock: A lock byte is invalid.
+- Invalid thread: A thread byte is invalid.
+
+Parallelism errors:
+- Pause: No thread can continue, all threads were inactive or waiting and could not be restarted.
+- Data race: A thread has written in a register while at least one other is trying to access it.
+
+Data errors:
+- Cursor address: A thread has tried to read the code outside of the program bounds.
+- Division by zero: A thread tried to divide by zero.
+- Input read: A thread failed to read the user input.
+- Input parse: A thread failed to parse the user input into an integer.

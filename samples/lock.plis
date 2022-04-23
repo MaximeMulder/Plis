@@ -6,9 +6,11 @@ const8 r2, 2
 const8 r3, 3
 label0:
 add r1, r0, r1, l1
+wait l1
 print r1
-rem r1, r2, r4, l1
+rem r1, r2, r4, l2
 const8 r5, label1
+wait l2
 jumpif r5, r4
 const8 r5, label0
 jump r5

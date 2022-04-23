@@ -5,6 +5,7 @@ use crate::operand::Operand;
 pub fn word_opcode(word: &str) -> Option<Opcode> {
     Some(match word {
         "nop"     => Opcode::Nop,
+        "move"    => Opcode::Move,
         "const8"  => Opcode::Const8,
         "const16" => Opcode::Const16,
         "const32" => Opcode::Const32,
@@ -45,6 +46,7 @@ pub fn word_opcode(word: &str) -> Option<Opcode> {
 pub fn opcode_operands(opcode: Opcode) -> &'static [Operand] {
     match opcode {
         Opcode::Nop     => &[],
+        Opcode::Move    => &[Operand::Register, Operand::Register],
         Opcode::Const8  => &[Operand::Register, Operand::Const8],
         Opcode::Const16 => &[Operand::Register, Operand::Const16],
         Opcode::Const32 => &[Operand::Register, Operand::Const32],
