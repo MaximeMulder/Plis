@@ -14,8 +14,12 @@ impl Machine<'_> {
         self.error(format_args!("Data race on register `{}`.", register_id));
     }
 
-    pub fn error_cursor_address(&self, thread_id: ThreadId, address: u64) -> ! {
-        self.error_thread(thread_id, format_args!("Cursor address {:#X} is out of the program bounds.", address));
+    pub fn error_program_address(&self, thread_id: ThreadId, address: u64) -> ! {
+        self.error_thread(thread_id, format_args!("Address {:#X} is outside of the program bounds.", address));
+    }
+
+    pub fn error_memory_address(&self, thread_id: ThreadId, address: u64) -> ! {
+        self.error_thread(thread_id, format_args!("Address {:#X} is outside of the memory bounds.", address));
     }
 
     pub fn error_invalid_opcode(&self, thread_id: ThreadId, opcode: u8) -> ! {

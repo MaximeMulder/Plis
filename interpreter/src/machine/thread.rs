@@ -122,28 +122,28 @@ impl Display for ThreadId {
 impl Machine<'_> {
     pub fn get_8(&mut self, thread_id: ThreadId) -> u8 {
         let cursor = self.threads.get(thread_id).cursor;
-        let value = self.program.get_8(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        let value = self.program.get_8(cursor).unwrap_or_else(|| self.error_program_address(thread_id, cursor));
         self.threads.get_mut(thread_id).cursor += 1;
         value
     }
 
     pub fn get_16(&mut self, thread_id: ThreadId) -> u16 {
         let cursor = self.threads.get(thread_id).cursor;
-        let value = self.program.get_16(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        let value = self.program.get_16(cursor).unwrap_or_else(|| self.error_program_address(thread_id, cursor));
         self.threads.get_mut(thread_id).cursor += 2;
         value
     }
 
     pub fn get_32(&mut self, thread_id: ThreadId) -> u32 {
         let cursor = self.threads.get(thread_id).cursor;
-        let value = self.program.get_32(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        let value = self.program.get_32(cursor).unwrap_or_else(|| self.error_program_address(thread_id, cursor));
         self.threads.get_mut(thread_id).cursor += 4;
         value
     }
 
     pub fn get_64(&mut self, thread_id: ThreadId) -> u64 {
         let cursor = self.threads.get(thread_id).cursor;
-        let value = self.program.get_64(cursor).unwrap_or_else(|| self.error_cursor_address(thread_id, cursor));
+        let value = self.program.get_64(cursor).unwrap_or_else(|| self.error_program_address(thread_id, cursor));
         self.threads.get_mut(thread_id).cursor += 8;
         value
     }

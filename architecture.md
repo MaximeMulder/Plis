@@ -499,7 +499,8 @@ Parallelism errors:
 - Data race: A thread has written in a register while at least one other is trying to access it.
 
 Data errors:
-- Cursor address: A thread has tried to read the code outside of the program bounds.
+- Program address: A thread has tried to read the program outside of its bounds.
+- Memory address: A thread has tried to read the memory outside of its bounds.
 - Division by zero: A thread tried to divide by zero.
 - Input read: A thread failed to read the user input.
 - Input parse: A thread failed to parse the user input into an integer.

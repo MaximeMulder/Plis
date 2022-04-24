@@ -130,38 +130,37 @@ sortstart:
 const8 r0, 0
 const8 r1, 1
 const8 r2, 32
-const8 r3, 32
 const16 r25, sortstart
 const16 r26, sortloop1
 const16 r27, sortloop2
 const16 r28, sortnext
 const16 r29, sortend
 sortloop1:
-sub r3, r1, r3, l0
+sub r2, r1, r2, l0
 wait l0
-eq r3, r0, r24, l0
+eq r2, r0, r24, l0
 wait l0
 jumpif r29, r24
-const8 r4, 0
+const8 r3, 0
 sortloop2:
-add r4, r1, r5, l0
-eq r4, r3, r24, l1
+add r3, r1, r4, l0
+eq r3, r2, r24, l1
 wait l0
 wait l1
 jumpif r26, r24
-load8 r4, r6, l0
-load8 r5, r7, l1
+load8 r3, r5, l0
+load8 r4, r6, l1
 wait l0
 wait l1
-gt r7, r6, r24, l0
+gt r6, r5, r24, l0
 wait l0
 jumpif r28, r24
-store8 r6, r5, l0
-store8 r7, r4, l1
+store8 r5, r4, l0
+store8 r6, r3, l1
 wait l0
 wait l1
 sortnext:
-move r5, r4
+move r4, r3
 jump r27
 sortend:
 printstart:

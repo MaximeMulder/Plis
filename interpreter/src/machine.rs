@@ -80,40 +80,40 @@ impl<'a> Machine<'a> {
                 self.register_write(destination, value);
             },
             Opcode::Const8 => {
-                self.constant(thread_id, |machine, thread| machine.next_const8(thread));
+                self.constant(thread_id, |machine, thread_id| machine.next_const8(thread_id));
             },
             Opcode::Const16 => {
-                self.constant(thread_id, |machine, thread| machine.next_const16(thread));
+                self.constant(thread_id, |machine, thread_id| machine.next_const16(thread_id));
             },
             Opcode::Const32 => {
-                self.constant(thread_id, |machine, thread| machine.next_const32(thread));
+                self.constant(thread_id, |machine, thread_id| machine.next_const32(thread_id));
             },
             Opcode::Const64 => {
-                self.constant(thread_id, |machine, thread| machine.next_const64(thread));
+                self.constant(thread_id, |machine, thread_id| machine.next_const64(thread_id));
             },
             Opcode::Load8 => {
-                self.load(thread_id, |memory, address| memory.get_8(address) as u64);
+                self.load(thread_id, |machine, thread_id, address| machine.load8(thread_id, address) as u64);
             },
             Opcode::Load16 => {
-                self.load(thread_id, |memory, address| memory.get_16(address) as u64);
+                self.load(thread_id, |machine, thread_id, address| machine.load16(thread_id, address) as u64);
             },
             Opcode::Load32 => {
-                self.load(thread_id, |memory, address| memory.get_32(address) as u64);
+                self.load(thread_id, |machine, thread_id, address| machine.load32(thread_id, address) as u64);
             },
             Opcode::Load64 => {
-                self.load(thread_id, |memory, address| memory.get_64(address) as u64);
+                self.load(thread_id, |machine, thread_id, address| machine.load64(thread_id, address) as u64);
             },
             Opcode::Store8 => {
-                self.store(thread_id, |memory, address, value| memory.set_8(address, value as u8));
+                self.store(thread_id, |machine, thread_id, address, value| machine.store8(thread_id, address, value as u8));
             },
             Opcode::Store16 => {
-                self.store(thread_id, |memory, address, value| memory.set_16(address, value as u16));
+                self.store(thread_id, |machine, thread_id, address, value| machine.store16(thread_id, address, value as u16));
             },
             Opcode::Store32 => {
-                self.store(thread_id, |memory, address, value| memory.set_32(address, value as u32));
+                self.store(thread_id, |machine, thread_id, address, value| machine.store32(thread_id, address, value as u32));
             },
             Opcode::Store64 => {
-                self.store(thread_id, |memory, address, value| memory.set_64(address, value as u64));
+                self.store(thread_id, |machine, thread_id, address, value| machine.store64(thread_id, address, value as u64));
             },
             Opcode::And => {
                 self.calcul(thread_id, TIME_AND, |_, _, a, b| a & b);
@@ -261,7 +261,7 @@ impl Machine<'_> {
         self.register_write(register, constant);
     }
 
-    fn load(&mut self, thread_id: ThreadId, closure: fn(&Memory, u64) -> u64) {
+    fn load(&mut self, thread_id: ThreadId, closure: fn(&Machine, ThreadId, u64) -> u64) {
         let address     = self.next_register(thread_id);
         let destination = self.next_register(thread_id);
         let lock_id     = self.next_lock(thread_id);
@@ -270,13 +270,13 @@ impl Machine<'_> {
         self.lock(lock_id);
 
         self.callback_delay(TIME_LOAD, move |machine| {
-            let value = closure(&machine.memory, address);
+            let value = closure(machine, thread_id, address);
             machine.register_write(destination, value);
             machine.unlock(lock_id);
         });
     }
 
-    fn store(&mut self, thread_id: ThreadId, closure: fn(&mut Memory, u64, u64)) {
+    fn store(&mut self, thread_id: ThreadId, closure: fn(&mut Machine, ThreadId, u64, u64)) {
         let source      = self.next_register(thread_id);
         let destination = self.next_register(thread_id);
         let lock_id     = self.next_lock(thread_id);
@@ -286,7 +286,7 @@ impl Machine<'_> {
         self.lock(lock_id);
 
         self.callback_delay(TIME_STORE, move |machine| {
-            closure(&mut machine.memory, address, value);
+            closure(machine, thread_id, address, value);
             machine.unlock(lock_id);
         });
     }
