@@ -1,4 +1,7 @@
 use std::process::exit;
+use term_table::Table;
+use term_table::row::Row;
+use term_table::table_cell::TableCell;
 
 use crate::machine::Machine;
 use crate::machine::thread::ThreadId;
@@ -72,11 +75,20 @@ impl Machine<'_> {
     }
 
     pub fn instruction_profile_dump(&mut self) {
-        println!("Cycles: {}", self.counter);
-        for thread in self.threads.iter() {
+        let mut table = Table::new();
+        table.add_row(Row::new(vec!["Thread", "Active time", "Inactive time", "Wait time"]));
+        for (i, thread) in self.threads.iter().enumerate() {
             let profile = thread.profile();
-            println!("Thread `{}`: Active {} - Inactive {} - Waiting {}", thread.id(), profile.active(), profile.inactive(), profile.waiting());
+            let mut row = Row::new(vec![thread.id().to_string(), profile.active().to_string(), profile.inactive().to_string(), profile.waiting().to_string()]);
+            if i != 0 {
+                row.has_separator = false;
+            }
+
+            table.add_row(row);
         }
+
+        table.add_row(Row::new(vec![TableCell::new_with_col_span(format!("Cycles: {}", self.counter), 4)]));
+        println!("{}", table.render());
     }
 
     pub fn instruction_end(&self) -> ! {

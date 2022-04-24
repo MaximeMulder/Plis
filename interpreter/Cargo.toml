@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 architecture = { path = "../architecture" }
+term-table = "1.3.2"
