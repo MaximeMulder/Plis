@@ -37,7 +37,7 @@ pub fn word_opcode(word: &str) -> Option<Opcode> {
         "unlock"  => Opcode::Unlock,
         "start"   => Opcode::Start,
         "stop"    => Opcode::Stop,
-        "halt"    => Opcode::End,
+        "halt"    => Opcode::Halt,
         "scan"    => Opcode::Scan,
         "print"   => Opcode::Print,
         "preset"  => Opcode::ProfileReset,

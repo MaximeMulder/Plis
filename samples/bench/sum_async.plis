@@ -1,0 +1,345 @@
+const8 r1, 85
+const8 r2, 0
+store8 r1, r2, l0
+wait l0
+const8 r1, 13
+const8 r2, 1
+store8 r1, r2, l0
+wait l0
+const8 r1, 244
+const8 r2, 2
+store8 r1, r2, l0
+wait l0
+const8 r1, 60
+const8 r2, 3
+store8 r1, r2, l0
+wait l0
+const8 r1, 15
+const8 r2, 4
+store8 r1, r2, l0
+wait l0
+const8 r1, 36
+const8 r2, 5
+store8 r1, r2, l0
+wait l0
+const8 r1, 43
+const8 r2, 6
+store8 r1, r2, l0
+wait l0
+const8 r1, 222
+const8 r2, 7
+store8 r1, r2, l0
+wait l0
+const8 r1, 184
+const8 r2, 8
+store8 r1, r2, l0
+wait l0
+const8 r1, 7
+const8 r2, 9
+store8 r1, r2, l0
+wait l0
+const8 r1, 8
+const8 r2, 10
+store8 r1, r2, l0
+wait l0
+const8 r1, 9
+const8 r2, 11
+store8 r1, r2, l0
+wait l0
+const8 r1, 83
+const8 r2, 12
+store8 r1, r2, l0
+wait l0
+const8 r1, 125
+const8 r2, 13
+store8 r1, r2, l0
+wait l0
+const8 r1, 145
+const8 r2, 14
+store8 r1, r2, l0
+wait l0
+const8 r1, 35
+const8 r2, 15
+store8 r1, r2, l0
+wait l0
+const8 r1, 99
+const8 r2, 16
+store8 r1, r2, l0
+wait l0
+const8 r1, 63
+const8 r2, 17
+store8 r1, r2, l0
+wait l0
+const8 r1, 124
+const8 r2, 18
+store8 r1, r2, l0
+wait l0
+const8 r1, 2
+const8 r2, 19
+store8 r1, r2, l0
+wait l0
+const8 r1, 11
+const8 r2, 20
+store8 r1, r2, l0
+wait l0
+const8 r1, 12
+const8 r2, 21
+store8 r1, r2, l0
+wait l0
+const8 r1, 79
+const8 r2, 22
+store8 r1, r2, l0
+wait l0
+const8 r1, 78
+const8 r2, 23
+store8 r1, r2, l0
+wait l0
+const8 r1, 254
+const8 r2, 24
+store8 r1, r2, l0
+wait l0
+const8 r1, 24
+const8 r2, 25
+store8 r1, r2, l0
+wait l0
+const8 r1, 58
+const8 r2, 26
+store8 r1, r2, l0
+wait l0
+const8 r1, 53
+const8 r2, 27
+store8 r1, r2, l0
+wait l0
+const8 r1, 42
+const8 r2, 28
+store8 r1, r2, l0
+wait l0
+const8 r1, 69
+const8 r2, 29
+store8 r1, r2, l0
+wait l0
+const8 r1, 56
+const8 r2, 30
+store8 r1, r2, l0
+wait l0
+const8 r1, 136
+const8 r2, 31
+store8 r1, r2, l0
+wait l0
+
+sumstart:
+    preset
+    const8 r0, 0
+    const8 r1, 1
+    const16 r2, sumend
+    const16 r3, sum1
+    lock l4
+    lock l9
+    lock l14
+    lock l19
+    lock l24
+    lock l29
+    lock l34
+    lock l39
+    start t1, r3
+    const16 r3, sum2
+    start t2, r3
+    const16 r3, sum3
+    start t3, r3
+    const16 r3, sum4
+    start t4, r3
+    const16 r3, sum5
+    start t5, r3
+    const16 r3, sum6
+    start t6, r3
+    const16 r3, sum7
+    start t7, r3
+    const16 r3, sum0
+    jump r3
+sum0:
+    const8 r10, 0
+    const8 r11, 0
+    load8 r10, r11, l0
+    const8 r10, 1
+    load8 r10, r12, l1
+    const8 r10, 2
+    load8 r10, r13, l2
+    const8 r10, 3
+    load8 r10, r14, l3
+    wait l0
+    wait l1
+    wait l2
+    wait l3
+    add r11, r12, r11, l0
+    wait l0
+    add r11, r13, r11, l0
+    wait l0
+    add r11, r14, r11, l4
+    jump r2
+sum1:
+    const8 r20, 4
+    const8 r21, 0
+    load8 r20, r21, l5
+    const8 r20, 5
+    load8 r20, r22, l6
+    const8 r20, 6
+    load8 r20, r23, l7
+    const8 r20, 7
+    load8 r20, r24, l8
+    wait l5
+    wait l6
+    wait l7
+    wait l8
+    add r21, r22, r21, l5
+    wait l5
+    add r21, r23, r21, l5
+    wait l5
+    add r21, r24, r21, l9
+    halt
+sum2:
+    const8 r30, 8
+    const8 r31, 0
+    load8 r30, r31, l10
+    const8 r30, 9
+    load8 r30, r32, l11
+    const8 r30, 10
+    load8 r30, r33, l12
+    const8 r30, 11
+    load8 r30, r34, l13
+    wait l10
+    wait l11
+    wait l12
+    wait l13
+    add r31, r32, r31, l10
+    wait l10
+    add r31, r33, r31, l10
+    wait l10
+    add r31, r34, r31, l14
+    halt
+sum3:
+    const8 r40, 12
+    const8 r41, 0
+    load8 r40, r41, l15
+    const8 r40, 13
+    load8 r40, r42, l16
+    const8 r40, 14
+    load8 r40, r43, l17
+    const8 r40, 15
+    load8 r40, r44, l18
+    wait l15
+    wait l16
+    wait l17
+    wait l18
+    add r41, r42, r41, l15
+    wait l15
+    add r41, r43, r41, l15
+    wait l15
+    add r41, r44, r41, l19
+    halt
+sum4:
+    const8 r50, 16
+    const8 r51, 0
+    load8 r50, r51, l20
+    const8 r50, 17
+    load8 r50, r52, l21
+    const8 r50, 18
+    load8 r50, r53, l22
+    const8 r50, 19
+    load8 r50, r54, l23
+    wait l20
+    wait l21
+    wait l22
+    wait l23
+    add r51, r52, r51, l20
+    wait l20
+    add r51, r53, r51, l20
+    wait l20
+    add r51, r54, r51, l24
+    halt
+sum5:
+    const8 r60, 20
+    const8 r61, 0
+    load8 r60, r61, l25
+    const8 r60, 21
+    load8 r60, r62, l26
+    const8 r60, 22
+    load8 r60, r63, l27
+    const8 r60, 23
+    load8 r60, r64, l28
+    wait l25
+    wait l26
+    wait l27
+    wait l28
+    add r61, r62, r61, l25
+    wait l25
+    add r61, r63, r61, l25
+    wait l25
+    add r61, r64, r61, l29
+    halt
+sum6:
+    const8 r70, 24
+    const8 r71, 0
+    load8 r70, r71, l30
+    const8 r70, 25
+    load8 r70, r72, l31
+    const8 r70, 26
+    load8 r70, r73, l32
+    const8 r70, 27
+    load8 r70, r74, l33
+    wait l30
+    wait l31
+    wait l32
+    wait l33
+    add r71, r72, r71, l30
+    wait l30
+    add r71, r73, r71, l30
+    wait l30
+    add r71, r74, r71, l34
+    halt
+sum7:
+    const8 r80, 28
+    const8 r81, 0
+    load8 r80, r81, l35
+    const8 r80, 29
+    load8 r80, r82, l36
+    const8 r80, 30
+    load8 r80, r83, l37
+    const8 r80, 31
+    load8 r80, r84, l38
+    wait l35
+    wait l36
+    wait l37
+    wait l38
+    add r81, r82, r81, l35
+    wait l35
+    add r81, r83, r81, l35
+    wait l35
+    add r81, r84, r81, l39
+    halt
+sumend:
+    wait l4
+    wait l9
+    wait l19
+    wait l29
+    wait l39
+    move r11, r0
+    add r0, r21, r0, l0
+    wait l0
+    add r0, r31, r0, l0
+    wait l0
+    add r0, r41, r0, l0
+    wait l0
+    add r0, r51, r0, l0
+    wait l0
+    add r0, r61, r0, l0
+    wait l0
+    add r0, r71, r0, l0
+    wait l0
+    add r0, r81, r0, l0
+    wait l0
+    pdump
+
+printstart:
+    print r0
+printend:
+    end

@@ -127,62 +127,30 @@ const8 r2, 31
 store8 r1, r2, l0
 wait l0
 
-sortstart:
+sumstart:
     preset
-    const8 r0, 0
+    const8 r0, 32
     const8 r1, 1
-    const8 r2, 32
-    const16 r25, sortstart
-    const16 r26, sortloop1
-    const16 r27, sortloop2
-    const16 r28, sortnext
-    const16 r29, sortend
-sortloop1:
-    sub r2, r1, r2, l0
-    wait l0
+    const8 r2, 0
+    const8 r3, 0
+    const16 r25, sumloop
+    const16 r26, sumend
+sumloop:
     eq r2, r0, r24, l0
     wait l0
-    jumpif r29, r24
-    const8 r3, 0
-sortloop2:
-    add r3, r1, r4, l0
-    eq r3, r2, r24, l1
-    wait l0
-    wait l1
     jumpif r26, r24
-    load8 r3, r5, l0
-    load8 r4, r6, l1
+    load8 r2, r4, l0
     wait l0
-    wait l1
-    gt r6, r5, r24, l0
+    add r3, r4, r3, l0
     wait l0
-    jumpif r28, r24
-    store8 r5, r4, l0
-    store8 r6, r3, l1
+    add r2, r1, r2, l0
     wait l0
-    wait l1
-sortnext:
-    move r4, r3
-    jump r27
-sortend:
+    jump r25
+sumend:
+    move r3, r0
     pdump
 
 printstart:
-    const8 r0, 0
-    const8 r1, 1
-    const8 r2, 32
-    const8 r3, 0
-    const16 r25, printloop
-    const16 r26, printend
-printloop:
-    eq r3, r2, r4, l0
-    wait l0
-    jumpif r26, r4
-    load8 r3, r4, l0
-    wait l0
-    print r4
-    add r3, r1, r3, l0
-    wait l0
-    jump r25
+    print r0
 printend:
     end
