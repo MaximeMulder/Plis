@@ -25,6 +25,14 @@ impl Threads {
         &mut self.threads[ThreadId::to_raw(id)]
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = &Thread> {
+        self.threads.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Thread> {
+        self.threads.iter_mut()
+    }
+
     pub fn get_threads(&self) -> Box<[ThreadId]> {
         self.threads.iter()
             .map(|thread| thread.id)
@@ -46,10 +54,39 @@ pub enum ThreadStatus {
     Waiting(LockId),
 }
 
+pub struct ThreadProfile {
+    active: usize,
+    inactive: usize,
+    waiting: usize,
+}
+
+impl ThreadProfile {
+    pub fn new() -> Self {
+        Self {
+            active: 0,
+            inactive: 0,
+            waiting: 0,
+        }
+    }
+
+    pub fn active(&self) -> usize {
+        self.active
+    }
+
+    pub fn inactive(&self) -> usize {
+        self.inactive
+    }
+
+    pub fn waiting(&self) -> usize {
+        self.waiting
+    }
+}
+
 pub struct Thread {
     id: ThreadId,
     cursor: u64,
     active: ThreadStatus,
+    profile: ThreadProfile,
 }
 
 impl Thread {
@@ -58,7 +95,21 @@ impl Thread {
             id,
             cursor: 0,
             active: ThreadStatus::Inactive,
+            profile: ThreadProfile::new(),
         }
+    }
+
+
+    pub fn profile_update(&mut self) {
+        match self.active {
+            ThreadStatus::Active     => self.profile.active   += 1,
+            ThreadStatus::Inactive   => self.profile.inactive += 1,
+            ThreadStatus::Waiting(_) => self.profile.waiting  += 1,
+        }
+    }
+
+    pub fn profile_reset(&mut self) {
+        self.profile = ThreadProfile::new();
     }
 
     pub fn is_active(&self) -> bool {
@@ -79,6 +130,10 @@ impl Thread {
 
     pub fn cursor(&self) -> u64 {
         self.cursor
+    }
+
+    pub fn profile(&self) -> &ThreadProfile {
+        &self.profile
     }
 
     pub fn jump(&mut self, cursor: u64) {

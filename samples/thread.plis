@@ -16,7 +16,7 @@ start t2, r2
 start t3, r3
 start t4, r4
 unlock l5
-end
+halt
 thread1:
     wait l5
     add r5, r9, r5, l1

@@ -335,33 +335,45 @@ Description:
 
 #### Integer eq
 
-Opcode: `0xF0`
+Opcode: `0x18`
 
-Format: `eq <r:a> <r:b> <r:result> <l:lock>`
+Format: `cmpeq <r:a> <r:b> <r:result> <l:lock>`
 
 Size: 5
 
 Description:
-- Checks if `a` and `b` are equal and stores the result in the `result`.
+- Stores 0 in `result` if `a` and `b` are equal or 1 otherwise.
+- This operation is asynchronous and unlocks `lock` once completed.
+
+#### Integer lt
+
+Opcode: `0x19`
+
+Format: `lt <r:a> <r:b> <r:result> <l:lock>`
+
+Size: 5
+
+Description:
+- Stores 0 in `result` if `a` is lesser than `b` or 1 otherwise.
 - This operation is asynchronous and unlocks `lock` once completed.
 
 #### Integer gt
 
-Opcode: `0xF1`
+Opcode: `0x1A`
 
 Format: `gt <r:a> <r:b> <r:result> <l:lock>`
 
 Size: 5
 
 Description:
-- Checks if `a` is greater than `b` and stores the result in the `result`.
+- Stores 0 in `result` if `a` is greater than `b` or 1 otherwise.
 - This operation is asynchronous and unlocks `lock` once completed.
 
 ### Jumps
 
 #### Jump
 
-Opcode: `0x18`
+Opcode: `0x1B`
 
 Format: `jump <r:address>`
 
@@ -372,20 +384,20 @@ Description:
 
 #### Jump if
 
-Opcode: `0x19`
+Opcode: `0x1C`
 
 Format: `jumpif <r:address> <r:condition>`
 
 Size: 3
 
 Description:
-- Jumps the current thread to the address `address` if `condition` is equal to zero.
+- Jumps the current thread to the address `address` if `condition` is equal to 0.
 
 ### Locks
 
 #### Wait
 
-Opcode: `0x1A`
+Opcode: `0x1D`
 
 Format: `wait <l:lock>`
 
@@ -396,7 +408,7 @@ Description:
 
 #### Lock
 
-Opcode: `0x1B`
+Opcode: `0x1E`
 
 Format: `lock <l:lock>`
 
@@ -407,7 +419,7 @@ Description:
 
 #### Unlock
 
-Opcode: `0x1C`
+Opcode: `0x1F`
 
 Format: `unlock <l:lock>`
 
@@ -420,7 +432,7 @@ Description:
 
 #### Start
 
-Opcode: `0x1D`
+Opcode: `0x20`
 
 Format: `start <t:thread> <r:address>`
 
@@ -431,7 +443,7 @@ Description:
 
 ### Stop
 
-Opcode: `0x1E`
+Opcode: `0x21`
 
 Format: `stop <t:thread>`
 
@@ -440,11 +452,11 @@ Size: 2
 Description:
 - Stops the execution of the thread `thread`.
 
-#### End
+#### Halt
 
-Opcode: `0x1F`
+Opcode: `0x22`
 
-Format: `end`
+Format: `halt`
 
 Size: 1
 
@@ -455,7 +467,7 @@ Description:
 
 #### Scan
 
-Opcode: `0x20`
+Opcode: `0x23`
 
 Format: `scan <r:register>`
 
@@ -466,7 +478,7 @@ Description:
 
 #### Print
 
-Opcode: `0x21`
+Opcode: `0x24`
 
 Format: `print <r:register>`
 
@@ -475,16 +487,38 @@ Size: 2
 Description:
 - Prints the integer in `register`.
 
-#### Exit
+#### Profile reset
 
-Opcode: `0x22`
+Opcode: `0x25`
 
-Format: `exit`
+Format: `preset`
+
+Size: 1
+
+Descriptions:
+- Resets the program profile information.
+
+#### Profile dump
+
+Opcode: `0x26`
+
+Format: `pdump`
+
+Size: 1
+
+Descriptions:
+- Prints the program profile information.
+
+#### End
+
+Opcode: `0x27`
+
+Format: `end`
 
 Size: 1
 
 Description:
-- Exits the program, ending the execution of all the threads.
+- Ends the program, ending the execution of all the threads.
 
 ## Errors
 

@@ -1,7 +1,7 @@
 const8 r0, label
 start t1, r0
 move r2, r1
-end
+halt
 label:
 move r3, r2
-exit
+end

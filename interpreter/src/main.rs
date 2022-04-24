@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 #![feature(bool_to_option)]
 #![feature(let_else)]
 

@@ -21,6 +21,7 @@ impl Registers {
         }
     }
 
+    #[allow(dead_code)]
     fn get(&self, id: RegisterId) -> &Register {
         &self.registers[RegisterId::to_raw(id)]
     }

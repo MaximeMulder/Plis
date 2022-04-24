@@ -1,11 +1,11 @@
 mod error;
+mod instructions;
 mod lock;
 mod memory;
 mod register;
 mod thread;
 
 use std::io::stdin;
-use std::process::exit;
 use std::rc::Rc;
 
 use architecture::Opcode;
@@ -49,6 +49,10 @@ impl<'a> Machine<'a> {
                 self.error_pause();
             }
 
+            for thread in self.threads.iter_mut() {
+                thread.profile_update();
+            }
+
             for thread in self.threads.get_actives().into_iter().copied() {
                 let opcode = self.next_opcode(thread);
                 self.run_instruction(thread, opcode);
@@ -80,67 +84,67 @@ impl<'a> Machine<'a> {
                 self.register_write(destination, value);
             },
             Opcode::Const8 => {
-                self.constant(thread_id, |machine, thread_id| machine.next_const8(thread_id));
+                self.instruction_const(thread_id, |machine, thread_id| machine.next_const8(thread_id));
             },
             Opcode::Const16 => {
-                self.constant(thread_id, |machine, thread_id| machine.next_const16(thread_id));
+                self.instruction_const(thread_id, |machine, thread_id| machine.next_const16(thread_id));
             },
             Opcode::Const32 => {
-                self.constant(thread_id, |machine, thread_id| machine.next_const32(thread_id));
+                self.instruction_const(thread_id, |machine, thread_id| machine.next_const32(thread_id));
             },
             Opcode::Const64 => {
-                self.constant(thread_id, |machine, thread_id| machine.next_const64(thread_id));
+                self.instruction_const(thread_id, |machine, thread_id| machine.next_const64(thread_id));
             },
             Opcode::Load8 => {
-                self.load(thread_id, |machine, thread_id, address| machine.load8(thread_id, address) as u64);
+                self.instruction_load(thread_id, |machine, thread_id, address| machine.load8(thread_id, address) as u64);
             },
             Opcode::Load16 => {
-                self.load(thread_id, |machine, thread_id, address| machine.load16(thread_id, address) as u64);
+                self.instruction_load(thread_id, |machine, thread_id, address| machine.load16(thread_id, address) as u64);
             },
             Opcode::Load32 => {
-                self.load(thread_id, |machine, thread_id, address| machine.load32(thread_id, address) as u64);
+                self.instruction_load(thread_id, |machine, thread_id, address| machine.load32(thread_id, address) as u64);
             },
             Opcode::Load64 => {
-                self.load(thread_id, |machine, thread_id, address| machine.load64(thread_id, address) as u64);
+                self.instruction_load(thread_id, |machine, thread_id, address| machine.load64(thread_id, address) as u64);
             },
             Opcode::Store8 => {
-                self.store(thread_id, |machine, thread_id, address, value| machine.store8(thread_id, address, value as u8));
+                self.instruction_store(thread_id, |machine, thread_id, address, value| machine.store8(thread_id, address, value as u8));
             },
             Opcode::Store16 => {
-                self.store(thread_id, |machine, thread_id, address, value| machine.store16(thread_id, address, value as u16));
+                self.instruction_store(thread_id, |machine, thread_id, address, value| machine.store16(thread_id, address, value as u16));
             },
             Opcode::Store32 => {
-                self.store(thread_id, |machine, thread_id, address, value| machine.store32(thread_id, address, value as u32));
+                self.instruction_store(thread_id, |machine, thread_id, address, value| machine.store32(thread_id, address, value as u32));
             },
             Opcode::Store64 => {
-                self.store(thread_id, |machine, thread_id, address, value| machine.store64(thread_id, address, value as u64));
+                self.instruction_store(thread_id, |machine, thread_id, address, value| machine.store64(thread_id, address, value as u64));
             },
             Opcode::And => {
-                self.calcul(thread_id, TIME_AND, |_, _, a, b| a & b);
+                self.instruction_calcul(thread_id, TIME_AND, |_, _, a, b| a & b);
             },
             Opcode::Or => {
-                self.calcul(thread_id, TIME_OR,  |_, _, a, b| a | b);
+                self.instruction_calcul(thread_id, TIME_OR,  |_, _, a, b| a | b);
             },
             Opcode::Xor => {
-                self.calcul(thread_id, TIME_XOR, |_, _, a, b| a ^ b);
+                self.instruction_calcul(thread_id, TIME_XOR, |_, _, a, b| a ^ b);
             },
             Opcode::ShiftL => {
-                self.calcul(thread_id, TIME_SHL, |_, _, a, b| a << b);
+                self.instruction_calcul(thread_id, TIME_SHL, |_, _, a, b| a << b);
             },
             Opcode::ShiftR => {
-                self.calcul(thread_id, TIME_SHR, |_, _, a, b| a >> b);
+                self.instruction_calcul(thread_id, TIME_SHR, |_, _, a, b| a >> b);
             },
             Opcode::Add => {
-                self.calcul(thread_id, TIME_ADD, |_, _, a, b| a + b);
+                self.instruction_calcul(thread_id, TIME_ADD, |_, _, a, b| a + b);
             },
             Opcode::Sub => {
-                self.calcul(thread_id, TIME_SUB, |_, _, a, b| a - b);
+                self.instruction_calcul(thread_id, TIME_SUB, |_, _, a, b| a - b);
             },
             Opcode::Mul => {
-                self.calcul(thread_id, TIME_MUL, |_, _, a, b| a * b);
+                self.instruction_calcul(thread_id, TIME_MUL, |_, _, a, b| a * b);
             },
             Opcode::Div => {
-                self.calcul(thread_id, TIME_DIV, |machine, thread_id, a, b| {
+                self.instruction_calcul(thread_id, TIME_DIV, |machine, thread_id, a, b| {
                     if b == 0 {
                         machine.error_division_by_zero(thread_id);
                     }
@@ -149,7 +153,7 @@ impl<'a> Machine<'a> {
                 });
             },
             Opcode::Rem => {
-                self.calcul(thread_id, TIME_REM, |machine, thread_id, a, b| {
+                self.instruction_calcul(thread_id, TIME_REM, |machine, thread_id, a, b| {
                     if b == 0 {
                         machine.error_division_by_zero(thread_id);
                     }
@@ -158,10 +162,13 @@ impl<'a> Machine<'a> {
                 });
             },
             Opcode::Eq => {
-                self.calcul(thread_id, TIME_EQ, |_, _, a, b| if a == b { 0 } else { 1 });
+                self.instruction_calcul(thread_id, TIME_EQ, |_, _, a, b| if a == b { 0 } else { 1 });
+            },
+            Opcode::Lt => {
+                self.instruction_calcul(thread_id, TIME_LT, |_, _, a, b| if a < b { 0 } else { 1 });
             },
             Opcode::Gt => {
-                self.calcul(thread_id, TIME_GT, |_, _, a, b| if a > b { 0 } else { 1 });
+                self.instruction_calcul(thread_id, TIME_GT, |_, _, a, b| if a > b { 0 } else { 1 });
             },
             Opcode::Jump => {
                 let address = self.next_register(thread_id);
@@ -225,7 +232,7 @@ impl<'a> Machine<'a> {
                     other.stop();
                 });
             },
-            Opcode::End => {
+            Opcode::Halt => {
                 let thread = self.threads.get_mut(thread_id);
 
                 thread.stop();
@@ -245,67 +252,16 @@ impl<'a> Machine<'a> {
 
                 println!("{}", value);
             },
-            Opcode::Exit => {
-                exit(0);
+            Opcode::ProfileReset => {
+                self.instruction_profile_reset();
+            },
+            Opcode::ProfileDump => {
+                self.instruction_profile_dump();
+            },
+            Opcode::End => {
+                self.instruction_end();
             },
         }
-    }
-}
-
-impl Machine<'_> {
-    fn constant(&mut self, thread: ThreadId, closure: impl Fn(&mut Machine, ThreadId) -> u64) {
-        let register = self.next_register(thread);
-
-        let constant = closure(self, thread);
-
-        self.register_write(register, constant);
-    }
-
-    fn load(&mut self, thread_id: ThreadId, closure: fn(&Machine, ThreadId, u64) -> u64) {
-        let address     = self.next_register(thread_id);
-        let destination = self.next_register(thread_id);
-        let lock_id     = self.next_lock(thread_id);
-
-        let address = self.register_read(address);
-        self.lock(lock_id);
-
-        self.callback_delay(TIME_LOAD, move |machine| {
-            let value = closure(machine, thread_id, address);
-            machine.register_write(destination, value);
-            machine.unlock(lock_id);
-        });
-    }
-
-    fn store(&mut self, thread_id: ThreadId, closure: fn(&mut Machine, ThreadId, u64, u64)) {
-        let source      = self.next_register(thread_id);
-        let destination = self.next_register(thread_id);
-        let lock_id     = self.next_lock(thread_id);
-
-        let address = self.register_read(destination);
-        let value   = self.register_read(source);
-        self.lock(lock_id);
-
-        self.callback_delay(TIME_STORE, move |machine| {
-            closure(machine, thread_id, address, value);
-            machine.unlock(lock_id);
-        });
-    }
-
-    fn calcul(&mut self, thread_id: ThreadId, delay: usize, closure: fn(&Machine, ThreadId, u64, u64) -> u64) {
-        let a       = self.next_register(thread_id);
-        let b       = self.next_register(thread_id);
-        let result  = self.next_register(thread_id);
-        let lock_id = self.next_lock(thread_id);
-
-        let a = self.register_read(a);
-        let b = self.register_read(b);
-        self.lock(lock_id);
-
-        self.callback_delay(delay, move |machine| {
-            let value = closure(machine, thread_id, a, b);
-            machine.register_write(result, value);
-            machine.unlock(lock_id);
-        });
     }
 }
 

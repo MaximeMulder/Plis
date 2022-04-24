@@ -127,6 +127,7 @@ const8 r2, 31
 store8 r1, r2, l0
 wait l0
 sortstart:
+preset
 const8 r0, 0
 const8 r1, 1
 const8 r2, 32
@@ -163,23 +164,23 @@ sortnext:
 move r4, r3
 jump r27
 sortend:
+pdump
 printstart:
 const8 r0, 0
 const8 r1, 1
 const8 r2, 32
 const8 r3, 0
 const16 r25, printloop
-const16 r26, printloop
-const16 r27, printend
+const16 r26, printend
 printloop:
 eq r3, r2, r4, l0
 wait l0
-jumpif r27, r4
+jumpif r26, r4
 load8 r3, r4, l0
 wait l0
 print r4
 add r3, r1, r3, l0
 wait l0
-jump r26
+jump r25
 printend:
-exit
+end
