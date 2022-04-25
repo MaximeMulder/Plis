@@ -11,5 +11,5 @@ pub const TIME_MUL:   usize = 20;
 pub const TIME_DIV:   usize = 50;
 pub const TIME_REM:   usize = 50;
 pub const TIME_EQ:    usize = 2;
-pub const TIME_LT:   usize = 5;
+pub const TIME_LT:    usize = 5;
 pub const TIME_GT:    usize = 2;
